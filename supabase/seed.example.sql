@@ -1,0 +1,9 @@
+-- Template only: replace pot_wallet and starts_at with your own devnet setup.
+-- Run only after applying the migration. Never use a mainnet treasury here.
+-- insert into public.hundo_rounds(starts_at,pot_wallet,pot_lamports)
+-- values ('2026-10-01 18:00:00+00','YOUR_DEVNET_PUBLIC_KEY',100000000)
+-- returning id;
+-- Then insert ten questions with number 0..9 for that round id.
+-- insert into public.hundo_questions(round_id,number,text,options)
+-- values ('ROUND_UUID',0,'Что ты говоришь себе перед тем, как занести?',
+-- array['Я всё изучил','Только на чуть-чуть','В этот раз рано','Это инвестиция']);

@@ -1,0 +1,4 @@
+project_id = "hundo"
+[functions.game]
+# Gateway key check plus wallet signature and hashed session auth inside the function.
+verify_jwt = true

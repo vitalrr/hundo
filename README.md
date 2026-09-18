@@ -1,105 +1,65 @@
-# Solana Mobile Expo Template
+# hundo — Android prototype
 
-This template is a ready-to-go Android Expo dApp that offers:
+Ежедневная игра на чутьё: угадай выбор большинства оставшихся игроков.
 
-- Solana libraries: `web3.js`, Mobile Wallet Adapter, and `spl-token`.
-- Required polyfills like `crypto` and `Buffer` configured.
-- Pre-built React UI and re-usable hooks and code patterns like `useMobileWallet`.
+## Состояние
 
-**This is only fully functional on Android.**
+- React Native / Expo Android-проект из официального `solana-mobile/solana-mobile-expo-template`, исходная ревизия `04cdd54bc3a9234b518412c51b0d6c5f1d32dc29`.
+- Шесть состояний интерфейса: подключение кошелька, комната, вопрос, результат, финал, архив для тренировки.
+- Автономный демораунд, явно помеченные синтетические голоса, без денежных призов.
+- MWA-подключение кошелька; при заданном API — серверная проверка подписанного одноразового сообщения.
+- Серверный SQL: синхронные вопросы, скрытые ответы, отсев, деление банка, права доступа.
+- Edge Function: вход, проверка on-chain memo-регистрации, ответы, состояние, архив.
+- Экран живого раунда, баланс публичного кошелька и ссылки Explorer. Сеть версии 0.1: **devnet**.
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="./screenshots/screenshot1.png" alt="Scaffold dApp Screenshot 1" width=300 />
-    </td>
-    <td align="center">
-      <img src="./screenshots/screenshot2.png" alt="Scaffold dApp Screenshot 2" width=300 />
-    </td>
-    <td align="center">
-      <img src="./screenshots/screenshot3.png" alt="Scaffold dApp Screenshot 3" width=300 />
-    </td>
-  </tr>
-</table>
+**Не готово к публичному запуску:** проверка на Seeker, нативная APK-сборка, исполнитель выплат, производственная защита от ботов и нагрузочное тестирование. Таблица выплат содержит обязательства; запись в ней не означает выполненный перевод. Автоматического отправления денег в этой версии нет.
 
-## Tech Stack
+## Запуск
 
-| Library               | Category          | Version | Description                                           |
-| --------------------- | ----------------- | ------- | ----------------------------------------------------- |
-| React Native          | Mobile Framework  | v0.76   | The best cross-platform mobile framework              |
-| Expo                  | SDK               | v52     | Allows (optional) Expo modules                        |
-| React                 | UI Framework      | v18.3   | The most popular UI framework in the world            |
-| Mobile Wallet Adapter | SDK               | v2.1    | Connect and request signing from mobile wallet apps   |
-| Solana web3.js        | SDK               | v1.78   | General Solana library for transactions and RPCs      |
-| spl-token             | SDK               | v0.4    | Library for building with Solana SPL tokens           |
-| React Native Paper    | Component Library | v5.12   | Production-ready components following Material Design |
-| React Navigation      | Navigation        | v6      | Performant and consistent navigation framework        |
-| React Query           | State management  | v5.24   | Async query management                                |
-| TypeScript            | Language          | v5      | Static typechecking                                   |
-| AsyncStorage          | Persistence       | v1.23   | State persistence                                     |
+Node.js 22+ (для тестов со встроенной поддержкой TypeScript — Node 24), pnpm, JDK 17 и Android SDK.
 
-## Quick Start
-
-### Prerequisites
-
-- A free [Expo](https://expo.dev/) account.
-- An Android device/emulator to test your app
-  - Install an MWA compliant wallet app on your device/emulator.
-- If using Expo's cloud service `eas build`, no further setup is required.
-- If building locally:
-  - React Native and Android Envrionment [setup](https://docs.solanamobile.com/getting-started/development-setup)
-
-### Initialize
-
-Run the CLI command:
-
-```
-yarn create expo-app --template @solana-mobile/solana-mobile-expo-template
+```sh
+pnpm install
+pnpm test
+pnpm typecheck
+pnpm android
 ```
 
-Choose your project name then navigate into the directory.
+Mobile Wallet Adapter требует нативную сборку; Expo Go не подходит. На Seeker нужно включить режим разработчика и USB debugging, подключить USB и разрешить отладку.
 
-### Build and run the app
+Облачная сборка APK после настройки собственного Expo/EAS аккаунта:
 
-Once your app is initialized, follow the **["Running the app"](https://docs.solanamobile.com/react-native/expo#running-the-app)** guide to launch the template as a custom development build.
+```sh
+pnpm exec eas build --platform android --profile preview
+```
 
-## Troubleshooting
+EAS CLI устанавливается отдельно. Профиль preview настроен на APK.
 
-- `Metro has encountered an error: While trying to resolve module @solana-mobile/mobile-wallet-adapter-protocol...`
+## Supabase
 
-  - This is an on-going issue when using `npm install` to install the Expo template.
-  - To mitigate, clean your project dependencies and reinstall with `yarn install`
+1. Создать проект. Применить `supabase/migrations/202609180001_hundo.sql`.
+2. Развернуть функцию `game` из `supabase/functions/game/index.ts`. В текущем проекте проверка ключа на шлюзе включена; приложение передаёт публичный ключ в `apikey` и `Authorization`. Функция дополнительно проверяет подпись кошелька и сессионный токен. Все таблицы и игровые SQL-функции доступны исключительно `service_role`.
+3. Секреты `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY` Supabase предоставляет функции. `SOLANA_RPC_URL` должен указывать на devnet. Секретный ключ кошелька в функцию не передаётся.
+4. Скопировать `.env.example` в `.env`, задать `EXPO_PUBLIC_GAME_API_URL=https://PROJECT.supabase.co/functions/v1/game` и `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+5. Создать тестовый раунд: отдельный devnet-кошелёк, объявленный банк в lamports, время UTC и ровно 10 вопросов. Данные примера — `supabase/seed.example.sql`.
+6. Пересобрать приложение; проверить минимум на двух кошельках.
 
-- `The package 'solana-mobile-wallet-adapter-protocol' doesn't seem to be linked. Make sure: ...`
+## Правила версии 0.1
 
-  - Ensure you are _NOT_ using Expo Go to run your app.
-  - You need to be using an [Expo custom development build](https://docs.solanamobile.com/react-native/expo#custom-development-build), rather than Expo Go.
+- Один кошелёк — одно участие. Это не гарантия одного человека.
+- Регистрация до старта, бесплатный вход, memo-транзакция требует сетевую комиссию тестовыми SOL.
+- 10 вопросов, 10 секунд ответа и 5 секунд результата на каждый.
+- Только активные игроки могут голосовать. Приём определяется временем базы после получения блокировки раунда.
+- При равенстве лидируют все варианты с максимальным числом голосов. Нет голосов — нет прошедших.
+- Пропуск ответа означает выбывание. Ответ после принятия неизменяемый.
+- `survivor_cap` по умолчанию NULL. При включении проходят самые быстрые по времени получения сервером. Одинаковое время на границе пропускает всех; лимит может быть превышен. Сетевая задержка влияет на скорость.
+- Банк делится целочисленно в lamports. Остаток остаётся в кошельке. При отсутствии финалистов весь банк остаётся в кошельке.
+- Призовой банк контролирует оператор; это не escrow и не гарантированная смарт-контрактом выплата.
 
-- `failed to connect to...`
+## Проверки и ограничения
 
-  - This is an Expo error that can occur when trying to connect to the dev server on certain Wifi networks.
-  - To fix, try starting the dev server with the `--tunnel` command (`npx expo start --dev-client --tunnel`)
+`pnpm test` проверяет чистые правила и настоящие SQL-функции в PostgreSQL/WASM (PGlite), включая закрытие голосования и запрет анонимного доступа. Это не нагрузочный тест и не замена проверке hosted Supabase.
 
-- `Error: crypto.getRandomValues() not supported`
-  - This is a polyfill issue when trying to use certain functions from the `@solana/web3.js` in a React Native/Expo environment.
-  - To fix, ensure your App properly imports and uses the polyfills like in this [guide](http://docs.solanamobile.com/react-native/expo#step-3-update-appjs-with-polyfills).
+Для первого публичного эфира ещё нужны: производственный RPC, глобальные ограничения запросов и защита от Sybil-аккаунтов, очистка истёкших сессий/nonce, устойчивый к повторным запускам исполнитель выплат с подтверждением в сети, тест потери связи и реального MWA на Seeker, проверка mainnet-настроек, мониторинг и правила игры. Текущий polling раз в секунду рассчитан на прототип, не на массовый эфир.
 
-<br>
-
-- `error Failed to load configuration of your project.`
-  - Same as above, but for `yarn`. [Uninstall and reinstall](https://github.com/react-native-community/cli#updating-the-cli) the CLI through yarn.
-
-<br>
-
-- `Looks like your iOS environment is not properly set`:
-  - You can ignore this during template initialization and build the Android app as normal. This template is only compatible with Android.
-
-<br>
-
-- `Usage Error: It seems you are trying to add a package using a https:... url; we now require package names to be explicitly specified.`
-  - This error happens on certain versions of `yarn`, and occurs if you try to initialize the template through the Github repo URL, rather than the npm package. To avoid this, use the `@solana-mobile/solana-mobile-dapp-scaffold` package as specified, or downgrade your `yarn` version to classic (1.22.x).
-
-<br>
-
-- `error Couldn't find the ".../@solana-mobile/solana-mobile-dapp-scaffold/template.config.js file inside "@solana-mobile/solana-mobile-dapp-scaffold" template.`
-  - This is a [known error](https://github.com/react-native-community/cli/issues/1924) that occurs with certain versions of `yarn` (>= 3.5.0). It is fixed by running the cli command with the `--npm` flag or downgrading your version of `yarn`.
+Проект Supabase создан и функция развёрнута; детали и проверенные операции — `docs/project.md`. Для повторной проверки соединения: `node scripts/smoke.cjs` (использует одноразовый пустой кошелёк; не отправляет транзакции).
