@@ -80,30 +80,30 @@ export function HundoApp() {
     else setScreen('lobby');
   }
   const won = alive && screen === 'final';
-  return <SafeAreaView style={s.safe}><Image source={require('../../assets/home-gradient.png')} style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]} resizeMode="stretch" pointerEvents="none" accessible={false} /><StatusBar style="dark" /><ScrollView contentContainerStyle={s.page}>
+  return <SafeAreaView style={s.safe}><Image source={require('../../assets/home-gradient.png')} style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]} resizeMode="stretch" accessible={false} /><StatusBar style="dark" /><ScrollView contentContainerStyle={s.page}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="На главный экран" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{(screen === 'play' || screen === 'final') && <Text style={s.pill}>ДЕМО</Text>}</View>
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>
-        <Text style={s.eyebrow}>СЛЕДУЮЩАЯ ИГРА</Text>
-        <Text style={s.homeTime}>СКОРО</Text>
-        <Text style={s.scheduleNote}>Дата и время появятся после назначения игры</Text>
+        <Text style={s.eyebrow}>NEXT GAME</Text>
+        <Text style={s.homeTime}>12:00</Text>
+        <Text style={s.scheduleNote}>Every day · your local time</Text>
         <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>10 000 <Text style={s.homeUnit}>SKR</Text></Text>
       </View>
       <View style={s.rulesPanel}>
-        <Text style={s.rulesText}>Выбирай ответ, который выберет большинство игроков.</Text>
+        <Text style={s.rulesText}>Pick the answer most players will choose.</Text>
         <View style={s.rulesDivider} />
-        <View style={s.row}><Text style={s.rulesMetric}>10 вопросов</Text><Text style={s.rulesMetric}>10 секунд на ответ</Text></View>
+        <View style={s.row}><Text style={s.rulesMetric}>10 questions</Text><Text style={s.rulesMetric}>10 seconds</Text></View>
       </View>
-      {address ? <Text style={s.body}>● Кошелёк {address.slice(0, 5)}…{address.slice(-5)} подключён · Devnet</Text> : <Button title={busy ? 'Открываем кошелёк…' : 'Подключить кошелёк ↗'} onPress={connect} disabled={busy} />}
+      <Text style={s.waiting}>37 players are already waiting</Text>
+      {address ? <Text style={s.body}>● Wallet {address.slice(0, 5)}…{address.slice(-5)} connected · Devnet</Text> : <Button title={busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy} />}
       {API_URL && address ? <LiveRound address={address} /> : null}
-      <Button title="Попробовать демо ↗" onPress={startDemo} secondary />
-      <Button title="Тренировка ↗" onPress={() => setScreen('practice')} secondary />
-      <Text style={s.footnote}>Демо — без денежных призов. Тренировка — по завершённым эфирам.</Text>
+      <Button title="See how it works ↗" onPress={startDemo} secondary />
+      <Text style={s.footnote}>A quick walkthrough of the game.</Text>
     </>}
     {screen === 'play' && <>
-      <View style={s.row}><Text style={s.eyebrow}>ВОПРОС {String(phase.index + 1).padStart(2, '0')} / 10</Text><Text style={[s.pill, !alive && { color: C.purple }]}>{alive ? '● В игре' : '◉ Зритель'}</Text></View>
+      <View style={s.row}><Text style={s.eyebrow}>QUESTION {String(phase.index + 1).padStart(2, '0')} / 10</Text><Text style={[s.pill, !alive && { color: C.purple }]}>{alive ? '● PLAYING' : '◉ SPECTATOR'}</Text></View>
       <View style={s.progress}>{Array.from({ length: 10 }, (_, i) => <View key={i} style={[s.segment, i <= phase.index && { backgroundColor: C.lime }]} />)}</View>
-      <View style={s.timerRow}><Text style={[s.timer, phase.remaining < 3000 && phase.phase === 'question' && { color: C.danger }]}>{Math.ceil(phase.remaining / 1000).toString().padStart(2, '0')}<Text style={s.body}> сек</Text></Text><Text style={s.small}>{phase.phase === 'question' ? 'ЧТО ВЫБЕРЕТ\nБОЛЬШИНСТВО?' : 'ДО СЛЕДУЮЩЕГО\nВОПРОСА'}</Text></View>
+      <View style={s.timerRow}><Text style={[s.timer, phase.remaining < 3000 && phase.phase === 'question' && { color: C.danger }]}>{Math.ceil(phase.remaining / 1000).toString().padStart(2, '0')}<Text style={s.body}> sec</Text></Text><Text style={s.small}>{phase.phase === 'question' ? 'WHAT WILL MOST\nPLAYERS PICK?' : 'NEXT QUESTION\nIN'}</Text></View>
       <Text style={s.question}>{q.text}</Text>
       {q.options.map((option, i) => {
         const selected = answers[phase.index] === i, revealed = phase.phase === 'result', winner = counts[i] === max;
@@ -112,7 +112,7 @@ export function HundoApp() {
           <Text style={[s.letter, (selected || revealed && winner) && { color: C.lime }]}>{letters[i]}</Text><Text style={s.optionText}>{option}</Text>{revealed ? <Text style={s.percent}>{Math.round(counts[i] / total * 100)}%</Text> : selected && <Text style={{ color: C.lime }}>✓</Text>}
         </Pressable>;
       })}
-      <View accessibilityLiveRegion="polite" style={s.status}><Text style={[s.statusTitle, { color: C.purple }]}>{phase.phase === 'result' ? alive ? 'Ты угадал большинство ↗' : 'Теперь ты зритель' : !alive ? 'Смотри, что выберут игроки' : answers[phase.index] !== undefined ? 'Ответ принят. Ждём остальных.' : 'Доверься первому чувству.'}</Text><Text style={s.footnote}>{phase.phase === 'result' ? 'Демонстрационные голоса, не реальные игроки.' : 'Ответы скрыты до конца таймера.'}</Text></View>
+      <View accessibilityLiveRegion="polite" style={s.status}><Text style={[s.statusTitle, { color: C.purple }]}>{phase.phase === 'result' ? alive ? 'You picked the majority ↗' : 'You are now watching' : !alive ? 'Watch what players choose' : answers[phase.index] !== undefined ? 'Answer locked. Waiting for others.' : 'Trust your first instinct.'}</Text><Text style={s.footnote}>{phase.phase === 'result' ? 'Demo votes, not real players.' : 'Answers stay hidden until the timer ends.'}</Text></View>
       <View style={s.spacer} /><Text style={s.footnote}>ДЕМО · Без денежных призов · <Text onPress={leave} style={{ textDecorationLine: 'underline' }}>Выйти</Text></Text>
     </>}
     {screen === 'final' && <>
@@ -127,7 +127,7 @@ export function HundoApp() {
   </ScrollView></SafeAreaView>;
 }
 const s = StyleSheet.create({
-  homeHero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 20 }, homeTime: { color: C.text, fontSize: 52, fontWeight: '900', letterSpacing: -2, textAlign: 'center' }, scheduleNote: { color: C.muted, fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 240 }, homePrize: { color: C.purple, fontSize: 76, fontWeight: '900', letterSpacing: -4, textAlign: 'center', width: '100%', marginTop: 18 }, homeUnit: { fontSize: 32, letterSpacing: -1 }, rulesPanel: { backgroundColor: '#FFFFFF55', borderRadius: 24, padding: 22, gap: 18, marginBottom: 6 }, rulesText: { color: C.text, fontSize: 17, lineHeight: 24, textAlign: 'center', fontWeight: '500' }, rulesDivider: { height: 1, backgroundColor: '#20202014' }, rulesMetric: { color: C.muted, fontSize: 13, fontWeight: '600' },
+  homeHero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 20 }, homeTime: { color: C.text, fontSize: 58, fontWeight: '900', letterSpacing: -2, textAlign: 'center' }, scheduleNote: { color: C.muted, fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 240 }, homePrize: { color: C.purple, fontSize: 76, fontWeight: '900', letterSpacing: -4, textAlign: 'center', width: '100%', marginTop: 18 }, homeUnit: { fontSize: 32, letterSpacing: -1 }, rulesPanel: { backgroundColor: '#FFFFFF55', borderRadius: 24, padding: 22, gap: 18, marginBottom: 6 }, rulesText: { color: C.text, fontSize: 17, lineHeight: 24, textAlign: 'center', fontWeight: '500' }, rulesDivider: { height: 1, backgroundColor: '#20202014' }, rulesMetric: { color: C.muted, fontSize: 13, fontWeight: '600' }, waiting: { color: C.purple, fontSize: 15, fontWeight: '800', textAlign: 'center', marginVertical: 2 },
   prizeCard: { backgroundColor: C.purple, padding: 24, borderRadius: 20, gap: 12, marginVertical: 6 }, prizeLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }, prizeAmount: { color: '#E8FF79', fontSize: 62, fontWeight: '900', letterSpacing: -2 }, prizeUnit: { fontSize: 28, letterSpacing: 0 }, prizeNote: { color: '#FFFFFF', fontSize: 12, lineHeight: 18 },
   safe: { flex: 1, backgroundColor: C.bg }, page: { flexGrow: 1, padding: 24, paddingTop: 12, gap: 14, maxWidth: 600, width: '100%', alignSelf: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }, wordmark: { color: C.text, fontSize: 38, fontWeight: '900', letterSpacing: -2 }, badge: { flexDirection: 'row', gap: 7, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderRadius: 20, padding: 9 }, dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.lime }, badgeText: { color: C.text, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
