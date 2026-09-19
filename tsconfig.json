@@ -6,6 +6,9 @@
     "allowImportingTsExtensions": true
   },
   "exclude": [
+    "dist",
+    "android",
+    "ios",
     "node_modules",
     "supabase/functions",
     "tests"

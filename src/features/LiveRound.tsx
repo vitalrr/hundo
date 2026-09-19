@@ -14,7 +14,7 @@ type Snapshot = {
 };
 const connection = new Connection('https://api.devnet.solana.com','confirmed');
 const explorer = (kind:string,id:string) => `https://explorer.solana.com/${kind}/${id}?cluster=devnet`;
-const sol = (value:string|number) => (Number(value)/1e9).toLocaleString('ru-RU',{maximumFractionDigits:9});
+const sol = (value:string|number) => (Number(value)/1e9).toLocaleString('en-US',{maximumFractionDigits:9});
 export function LiveRound({address}:{address:string}) {
  const wallet=useMobileWallet();const [roundId,setRoundId]=useState<string|null>(null);const [state,setState]=useState<Snapshot|null>(null);
  const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [balance,setBalance]=useState<number|null>(null);
@@ -28,7 +28,7 @@ export function LiveRound({address}:{address:string}) {
     if(!id){const latest=await request<{roundId:string|null}>('latest');id=latest.roundId;if(!stopped)setRoundId(id);}
     if(id){const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){synced.current={at:performance.now(),time:Date.parse(next.serverTime)};setState(next);}}
     if(!stopped)setError('');
-   }catch(e){if(!stopped)setError(e instanceof Error?e.message:'Нет связи');}
+   }catch(e){if(!stopped)setError(e instanceof Error?e.message:'Connection unavailable');}
    finally{if(!stopped)timer=setTimeout(poll,1000);}
   }
   void poll();return()=>{stopped=true;clearTimeout(timer);};
@@ -48,39 +48,39 @@ export function LiveRound({address}:{address:string}) {
     signature=await wallet.signAndSendTransaction(tx,latest.context.slot);
     pendingEntry.current={round:state.roundId,signature};
     const confirmed=await connection.confirmTransaction({...latest.value,signature},'finalized');
-    if(confirmed.value.err)throw new Error('Транзакция завершилась ошибкой');
+    if(confirmed.value.err)throw new Error('The transaction failed');
    }
    await request('join',{roundId:state.roundId,signature});setError('');
-  }catch(e){Alert.alert('Участие в эфире',e instanceof Error?e.message:'Не удалось войти');}
+  }catch(e){Alert.alert('Join the game',e instanceof Error?e.message:'Could not join the game');}
   finally{setBusy(false);}
  }
- async function answer(choice:number){if(!state)return;setBusy(true);try{await request('answer',{roundId:state.roundId,index:state.index,choice});setState(current=>current?.index===state.index?{...current,myChoice:choice}:current);setError('');}catch(e){setError(e instanceof Error?e.message:'Ответ не принят');}finally{setBusy(false);}}
+ async function answer(choice:number){if(!state)return;setBusy(true);try{await request('answer',{roundId:state.roundId,index:state.index,choice});setState(current=>current?.index===state.index?{...current,myChoice:choice}:current);setError('');}catch(e){setError(e instanceof Error?e.message:'Answer not accepted');}finally{setBusy(false);}}
  const stale=performance.now()-synced.current.at>3000;
  const serverNow=synced.current.time+performance.now()-synced.current.at;
  const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*15000+(state.phase==='question'?10000:15000)):0;
  const remaining=Math.max(0,Math.ceil((deadline-serverNow)/1000));
  return <View style={s.panel}>
-  <Text style={s.tag}>ЭФИР · DEVNET · ТЕСТОВЫЕ SOL</Text>
+  <Text style={s.tag}>LIVE · DEVNET · TEST SOL</Text>
   {error?<Text accessibilityLiveRegion="polite" style={s.error}>{error}</Text>:null}
-  {!state?<><Text style={s.title}>Эфир ещё не назначен</Text><Text style={s.body}>Здесь появится ближайший раунд.</Text></>:<>
-   <Text style={s.body}>{state.playerCount} участников · {state.survivorCount} в игре</Text>
-   <Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Объявленный банк · Баланс кошелька: {balance===null?'недоступен':`${sol(balance)} SOL`}</Text>
-   <Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>Проверить публичный кошелёк ↗</Text></Pressable>
-   {state.survivorCap!==null&&<Text style={s.body}>Лимит после каждого вопроса: {state.survivorCap}. При равной скорости на границе проходят все.</Text>}
+  {!state?<><Text style={s.title}>No game scheduled yet</Text><Text style={s.body}>The next game will appear here.</Text></>:<>
+   <Text style={s.body}>{state.playerCount} players · {state.survivorCount} still playing</Text>
+   <Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':`${sol(balance)} SOL`}</Text>
+   <Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable>
+   {state.survivorCap!==null&&<Text style={s.body}>Player cap after each question: {state.survivorCap}. Players tied at the cutoff all advance.</Text>}
    {state.phase==='lobby'&&<>
     <Text style={s.title}>{Math.floor(remaining/60)}:{(remaining%60).toString().padStart(2,'0')}</Text>
-    <Text style={s.body}>{state.joined?'Участие подтверждено в сети. Ждём старта.':'Вход фиксируется memo-транзакцией. Взноса нет; кошелёк оплачивает комиссию сети тестовыми SOL.'}</Text>
-    {!state.joined&&<Pressable style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Подтверждаем…':pendingEntry.current?'Проверить транзакцию повторно':'Подписать вход в раунд'}</Text></Pressable>}
+    <Text style={s.body}>{state.joined?'Entry confirmed on-chain. Waiting for the game.':'Sign to record your entry on-chain. Entry is free; a small network fee is paid in test SOL.'}</Text>
+    {!state.joined&&<Pressable style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
    </>}
    {(state.phase==='question'||state.phase==='result')&&<>
-    <Text style={s.tag}>ВОПРОС {state.index+1}/10 · {remaining} сек</Text>
-    <Text style={s.body}>{state.joined&&state.eliminatedAt===null?'Ты в игре':'Ты зритель'}</Text>
+    <Text style={s.tag}>QUESTION {state.index+1}/10 · {remaining} sec</Text>
+    <Text style={s.body}>{state.joined&&state.eliminatedAt===null?'You are playing':'You are watching'}</Text>
     <Text style={s.title}>{state.question?.text}</Text>
     {state.question?.options.map((option,i)=><Pressable key={i} disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||state.myChoice!==null} onPress={()=>void answer(i)} style={[s.option,(state.myChoice===i||state.leaders?.includes(i))&&{borderColor:'#D4FF62'}]}><Text style={s.body}>{option}{state.myChoice===i?' ✓':''}</Text>{state.counts&&<Text style={s.link}>{Math.round(state.counts[i]/Math.max(1,state.counts.reduce((a,b)=>a+b,0))*100)}%</Text>}</Pressable>)}
-    {state.phase==='result'&&<Text style={s.link}>{state.eliminatedAt===null&&state.joined?'Проходишь дальше ↗':'Оставайся смотреть эфир'}</Text>}
-    {stale&&<Text style={s.error}>Обновляем состояние сервера. Ответы временно недоступны.</Text>}
+    {state.phase==='result'&&<Text style={s.link}>{state.eliminatedAt===null&&state.joined?'You advance ↗':'Stay and watch the game'}</Text>}
+    {stale&&<Text style={s.error}>Reconnecting to the game. Answers are temporarily paused.</Text>}
    </>}
-   {state.phase==='final'&&<><Text style={s.title}>Раунд завершён</Text><Text style={s.body}>{state.survivorCount} финалистов делят банк. Остаток округления остаётся в публичном кошельке.</Text>{!state.payouts?.length&&<Text style={s.body}>Финалистов нет. Банк остаётся в кошельке.</Text>}{state.payouts?.map(p=><View key={p.wallet} style={s.option}><Text style={s.body}>{p.wallet===address?'Ты':`${p.wallet.slice(0,4)}…${p.wallet.slice(-4)}`} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>Выплата ↗</Text></Pressable>:<Text style={s.body}>Ожидает выплаты</Text>}</View>)}</>}
+   {state.phase==='final'&&<><Text style={s.title}>Game over</Text><Text style={s.body}>{state.survivorCount} finalists split the prize pool. Any rounding remainder stays in the public wallet.</Text>{!state.payouts?.length&&<Text style={s.body}>No finalists this time. The prize pool stays in the wallet.</Text>}{state.payouts?.map(p=><View key={p.wallet} style={s.option}><Text style={s.body}>{p.wallet===address?'You':`${p.wallet.slice(0,4)}…${p.wallet.slice(-4)}`} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}</>}
   </>}
  </View>;
 }

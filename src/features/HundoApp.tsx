@@ -72,16 +72,16 @@ export function HundoApp() {
         setSession(verified.token);
       }
       setAddress(publicKey); setScreen('lobby');
-    } catch (e) { Alert.alert('Подключение кошелька', e instanceof Error ? e.message : 'Не удалось подключиться. Попробуй ещё раз.'); }
+    } catch (e) { Alert.alert('Connect wallet', e instanceof Error ? e.message : 'Could not connect. Please try again.'); }
     finally { setBusy(false); }
   }
   function leave() {
-    if (screen === 'play') Alert.alert('Выйти из демораунда?', 'Можно начать заново в любой момент.', [{ text: 'Остаться', style: 'cancel' }, { text: 'Выйти', onPress: () => setScreen('lobby') }]);
+    if (screen === 'play') Alert.alert('Leave the demo?', 'You can start again anytime.', [{ text: 'Stay', style: 'cancel' }, { text: 'Leave', onPress: () => setScreen('lobby') }]);
     else setScreen('lobby');
   }
   const won = alive && screen === 'final';
   return <SafeAreaView style={s.safe}><Image source={require('../../assets/home-gradient.png')} style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]} resizeMode="stretch" accessible={false} /><StatusBar style="dark" /><ScrollView contentContainerStyle={s.page}>
-    <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="На главный экран" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{(screen === 'play' || screen === 'final') && <Text style={s.pill}>ДЕМО</Text>}</View>
+    <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{(screen === 'play' || screen === 'final') && <Text style={s.pill}>DEMO</Text>}</View>
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>
         <Text style={s.eyebrow}>NEXT GAME</Text>
@@ -113,15 +113,15 @@ export function HundoApp() {
         </Pressable>;
       })}
       <View accessibilityLiveRegion="polite" style={s.status}><Text style={[s.statusTitle, { color: C.purple }]}>{phase.phase === 'result' ? alive ? 'You picked the majority ↗' : 'You are now watching' : !alive ? 'Watch what players choose' : answers[phase.index] !== undefined ? 'Answer locked. Waiting for others.' : 'Trust your first instinct.'}</Text><Text style={s.footnote}>{phase.phase === 'result' ? 'Demo votes, not real players.' : 'Answers stay hidden until the timer ends.'}</Text></View>
-      <View style={s.spacer} /><Text style={s.footnote}>ДЕМО · Без денежных призов · <Text onPress={leave} style={{ textDecorationLine: 'underline' }}>Выйти</Text></Text>
+      <View style={s.spacer} /><Text style={s.footnote}>DEMO · No cash prizes · <Text onPress={leave} style={{ textDecorationLine: 'underline' }}>Leave</Text></Text>
     </>}
     {screen === 'final' && <>
-      <Text style={s.eyebrow}>ДЕМОРАУНД ЗАВЕРШЁН</Text><Text style={s.hero}>{won ? 'На одной\nволне.' : 'Ещё\nпопробуем!'}<Text style={{ color: C.lime }}>↗</Text></Text>
-      <View style={s.card}><Text style={s.eyebrow}>{won ? 'ТЫ ДОШЁЛ ДО ФИНАЛА' : 'ТВОЙ РЕЗУЛЬТАТ'}</Text><Text style={s.large}>{won ? '10 / 10' : `${eliminatedAt ?? 0} / 10`}</Text><Text style={s.body}>{won ? 'В настоящем эфире финалисты делят банк поровну.' : `Выбывание на вопросе ${(eliminatedAt ?? 0) + 1}. Завтра — ещё один шанс почувствовать большинство.`}</Text><View style={s.rule} /><Text style={s.body}>Это демо: денежного банка и транзакций выплат здесь нет.</Text></View>
-      <View style={s.spacer} /><Button title="Попробовать ещё раз ↗" onPress={startDemo} /><Button title="В комнату ожидания" onPress={() => setScreen('lobby')} secondary />
+      <Text style={s.eyebrow}>DEMO COMPLETE</Text><Text style={s.hero}>{won ? 'On the same\nwavelength.' : 'Try your\ninstincts again.'}<Text style={{ color: C.lime }}>↗</Text></Text>
+      <View style={s.card}><Text style={s.eyebrow}>{won ? 'YOU MADE THE FINAL' : 'YOUR RESULT'}</Text><Text style={s.large}>{won ? '10 / 10' : `${eliminatedAt ?? 0} / 10`}</Text><Text style={s.body}>{won ? 'In a live game, finalists split the prize pool equally.' : `Eliminated on question ${(eliminatedAt ?? 0) + 1}. Another game, another chance to read the room.`}</Text><View style={s.rule} /><Text style={s.body}>This is a demo. There are no cash prizes or payouts.</Text></View>
+      <View style={s.spacer} /><Button title="Try again ↗" onPress={startDemo} /><Button title="Back to lobby" onPress={() => setScreen('lobby')} secondary />
     </>}
     {screen === 'practice' && <>
-      <Text style={s.eyebrow}>МЕЖДУ ЭФИРАМИ</Text><Text style={s.title}>Поймай{'\n'}настроение.</Text>{API_URL && address ? <Archive /> : <View style={s.card}><Text style={s.stat}>Первый эфир впереди</Text><Text style={s.body}>Здесь появятся вопросы прошлого раунда с настоящими процентами ответов после подключения сервера и кошелька.</Text></View>}<Text style={s.body}>Можешь освоить механику в демораунде. Его результаты смоделированы и не относятся к прошлым эфирам.</Text><View style={s.spacer} /><Button title="Открыть демораунд ↗" onPress={startDemo} /><Button title="Назад" onPress={() => setScreen('lobby')} secondary />
+      <Text style={s.eyebrow}>BETWEEN GAMES</Text><Text style={s.title}>Read the{'\n'}room.</Text>{API_URL && address ? <Archive /> : <View style={s.card}><Text style={s.stat}>The first game is coming</Text><Text style={s.body}>Connect your wallet to replay past questions with recorded voting results once the first game ends.</Text></View>}<Text style={s.body}>Learn the rules in a demo. Its votes are simulated, not recorded from past games.</Text><View style={s.spacer} /><Button title="Play the demo ↗" onPress={startDemo} /><Button title="Back" onPress={() => setScreen('lobby')} secondary />
     </>}
     {busy && <ActivityIndicator color={C.lime} style={{ marginTop: 10 }} />}
   </ScrollView></SafeAreaView>;
