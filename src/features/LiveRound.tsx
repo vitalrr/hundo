@@ -8,7 +8,7 @@ import { useMobileWallet } from '../utils/useMobileWallet';
 type Snapshot = {
  roundId:string;serverTime:string;startsAt:string;phase:'lobby'|'question'|'result'|'final';index:number;
  potWallet:string;potLamports:string;network:'devnet';survivorCap:number|null;playerCount:number;survivorCount:number;
- joined:boolean;eliminatedAt:number|null;myChoice:number|null;
+ joined:boolean;eliminatedAt:number|null;myChoice:number|null;isRehearsal:boolean;
  question?:{text:string;options:string[]};counts?:number[];leaders?:number[];
  payouts?:{wallet:string;lamports:string;signature:string|null;status:string}[];
 };
@@ -34,13 +34,14 @@ export function LiveRound({address}:{address:string}) {
   void poll();return()=>{stopped=true;clearTimeout(timer);};
  },[roundId,address]);
  useEffect(()=>{
-  if(!state?.potWallet)return;let stopped=false;
+  if(!state?.potWallet||state.isRehearsal)return;let stopped=false;
   async function load(){try{const value=await connection.getBalance(new PublicKey(state!.potWallet));if(!stopped)setBalance(value);}catch{if(!stopped)setBalance(null);}}
   void load();const timer=setInterval(load,15000);return()=>{stopped=true;clearInterval(timer);};
- },[state?.potWallet]);
+ },[state?.potWallet,state?.isRehearsal]);
  async function join(){
   if(!state)return;setBusy(true);
   try{
+   if(state.isRehearsal){await request('join-rehearsal',{roundId:state.roundId});setError('');return;}
    let signature=pendingEntry.current?.round===state.roundId?pendingEntry.current.signature:null;
    if(!signature){
     const latest=await connection.getLatestBlockhashAndContext('confirmed');
@@ -60,17 +61,17 @@ export function LiveRound({address}:{address:string}) {
  const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*15000+(state.phase==='question'?10000:15000)):0;
  const remaining=Math.max(0,Math.ceil((deadline-serverNow)/1000));
  return <View style={s.panel}>
-  <Text style={s.tag}>LIVE · DEVNET · TEST SOL</Text>
+  <Text style={s.tag}>{state?.isRehearsal?'LIVE REHEARSAL':'LIVE · DEVNET · TEST SOL'}</Text>
   {error?<Text accessibilityLiveRegion="polite" style={s.error}>{error}</Text>:null}
   {!state?<><Text style={s.title}>No game scheduled yet</Text><Text style={s.body}>The next game will appear here.</Text></>:<>
    <Text style={s.body}>{state.playerCount} players · {state.survivorCount} still playing</Text>
-   <Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':`${sol(balance)} SOL`}</Text>
-   <Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable>
+   {!state.isRehearsal&&<><Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':`${sol(balance)} SOL`}</Text>
+   <Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable></>}
    {state.survivorCap!==null&&<Text style={s.body}>Player cap after each question: {state.survivorCap}. Players tied at the cutoff all advance.</Text>}
    {state.phase==='lobby'&&<>
     <Text style={s.title}>{Math.floor(remaining/60)}:{(remaining%60).toString().padStart(2,'0')}</Text>
-    <Text style={s.body}>{state.joined?'Entry confirmed on-chain. Waiting for the game.':'Sign to record your entry on-chain. Entry is free; a small network fee is paid in test SOL.'}</Text>
-    {!state.joined&&<Pressable style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
+    <Text style={s.body}>{state.isRehearsal ? (state.joined ? 'You’re in. Waiting for the game.' : 'Join with your connected wallet. No transaction or network fee.') : state.joined?'Entry confirmed on-chain. Waiting for the game.':'Sign to record your entry on-chain. Entry is free; a small network fee is paid in test SOL.'}</Text>
+    {!state.joined&&<Pressable style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':state.isRehearsal?'Join rehearsal':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
    </>}
    {(state.phase==='question'||state.phase==='result')&&<>
     <Text style={s.tag}>QUESTION {state.index+1}/10 · {remaining} sec</Text>
@@ -80,7 +81,7 @@ export function LiveRound({address}:{address:string}) {
     {state.phase==='result'&&<Text style={s.link}>{state.eliminatedAt===null&&state.joined?'You advance ↗':'Stay and watch the game'}</Text>}
     {stale&&<Text style={s.error}>Reconnecting to the game. Answers are temporarily paused.</Text>}
    </>}
-   {state.phase==='final'&&<><Text style={s.title}>Game over</Text><Text style={s.body}>{state.survivorCount} finalists split the prize pool. Any rounding remainder stays in the public wallet.</Text>{!state.payouts?.length&&<Text style={s.body}>No finalists this time. The prize pool stays in the wallet.</Text>}{state.payouts?.map(p=><View key={p.wallet} style={s.option}><Text style={s.body}>{p.wallet===address?'You':`${p.wallet.slice(0,4)}…${p.wallet.slice(-4)}`} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}</>}
+   {state.phase==='final'&&<><Text style={s.title}>Game over</Text>{state.isRehearsal ? <Text style={s.body}>{state.survivorCount} finalists. Rehearsal complete — no payouts are sent.</Text> : <><Text style={s.body}>{state.survivorCount} finalists split the prize pool. Any rounding remainder stays in the public wallet.</Text>{!state.payouts?.length&&<Text style={s.body}>No finalists this time. The prize pool stays in the wallet.</Text>}{state.payouts?.map(p=><View key={p.wallet} style={s.option}><Text style={s.body}>{p.wallet===address?'You':`${p.wallet.slice(0,4)}…${p.wallet.slice(-4)}`} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}</>}</>}
   </>}
  </View>;
 }

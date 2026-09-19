@@ -8,6 +8,14 @@ const key=Keypair.generate();
 const headers={'Content-Type':'application/json',apikey:env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY}`};
 async function call(body,token){const res=await fetch(env.EXPO_PUBLIC_GAME_API_URL,{method:'POST',headers:{...headers,...(token?{'X-Hundo-Session':token}:{})},body:JSON.stringify(body)});return {status:res.status,body:await res.json()};}
 (async()=>{
+ const preflight=await fetch(env.EXPO_PUBLIC_GAME_API_URL,{method:'OPTIONS',headers:{Origin:'http://localhost:8082','Access-Control-Request-Headers':'apikey,authorization,content-type'}});
+ assert.equal(preflight.status,200);
+ assert.ok(preflight.headers.get('access-control-allow-headers').includes('apikey'));
+ const home=await call({action:'home'});assert.equal(home.status,200);
+ assert.ok(Number.isFinite(Date.parse(home.body.serverTime)));
+ assert.ok(home.body.round===null || (typeof home.body.round.playerCount==='number' && typeof home.body.round.startsAt==='string'));
+ assert.equal((await call({action:'join-rehearsal',roundId:'40000000-0000-4000-8000-000000000004'})).status,401);
+ console.log('PASS: public home summary, browser CORS, and anonymous rehearsal entry rejection.');
  assert.equal((await call({action:'latest'})).status,401);
  for (const format of ['prefix', 'suffix', 'detached']) {
  const challenge=await call({action:'challenge',wallet:key.publicKey.toBase58()});assert.equal(challenge.status,200);

@@ -9,6 +9,7 @@ import { questionPhase, type Choice } from '../game/rules';
 import { API_URL, request, setSession } from '../services/api';
 import { LiveRound } from './LiveRound';
 import { Archive } from './Archive';
+import { useHome } from '../services/useHome';
 
 type Screen = 'welcome' | 'lobby' | 'play' | 'final' | 'practice';
 const letters = ['A', 'B', 'C', 'D'];
@@ -19,6 +20,9 @@ function Button({ title, onPress, secondary, disabled }: { title: string; onPres
 export function HundoApp() {
   const wallet = useMobileWallet();
   const [screen, setScreen] = useState<Screen>('welcome');
+  const home = useHome(screen === 'welcome' || screen === 'lobby');
+  const nextRound = home.data?.round;
+  const startDate = nextRound ? new Date(nextRound.startsAt) : null;
   const [address, setAddress] = useState('');
   const [busy, setBusy] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
@@ -84,9 +88,9 @@ export function HundoApp() {
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{(screen === 'play' || screen === 'final') && <Text style={s.pill}>DEMO</Text>}</View>
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>
-        <Text style={s.eyebrow}>NEXT GAME</Text>
-        <Text style={s.homeTime}>12:00</Text>
-        <Text style={s.scheduleNote}>Every day · your local time</Text>
+        <Text style={s.eyebrow}>{nextRound?.phase === 'live' ? 'GAME IN PROGRESS' : 'NEXT GAME'}</Text>
+        <Text style={s.homeTime}>{nextRound?.phase === 'live' ? 'LIVE' : startDate ? startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : home.data ? 'SOON' : '—'}</Text>
+        <Text style={s.scheduleNote}>{startDate ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · your local time` : home.error || (home.data ? 'The next game will be announced here' : 'Loading the next game…')}</Text>
         <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>10 000 <Text style={s.homeUnit}>SKR</Text></Text>
       </View>
       <View style={s.rulesPanel}>
@@ -94,7 +98,7 @@ export function HundoApp() {
         <View style={s.rulesDivider} />
         <View style={s.row}><Text style={s.rulesMetric}>10 questions</Text><Text style={s.rulesMetric}>10 seconds</Text></View>
       </View>
-      <Text style={s.waiting}>37 players are already waiting</Text>
+      <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'player has' : 'players have'} joined` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
       {address ? <Text style={s.body}>● Wallet {address.slice(0, 5)}…{address.slice(-5)} connected · Devnet</Text> : <Button title={busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy} />}
       {API_URL && address ? <LiveRound address={address} /> : null}
       <Button title="See how it works ↗" onPress={startDemo} secondary />

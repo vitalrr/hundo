@@ -6,7 +6,7 @@ import { Buffer } from 'node:buffer';
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
 const rpc = new Connection(Deno.env.get('SOLANA_RPC_URL') || 'https://api.devnet.solana.com', 'finalized');
 const encoder = new TextEncoder();
-const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type,x-hundo-session', 'Access-Control-Allow-Methods': 'POST,OPTIONS' };
+const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type,x-hundo-session,apikey,authorization', 'Access-Control-Allow-Methods': 'POST,OPTIONS' };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 const hash = async (s: string) => Buffer.from(await crypto.subtle.digest('SHA-256', encoder.encode(s))).toString('hex');
 function check(error: unknown) { if (error) throw new Error('Не удалось обработать запрос'); }
@@ -26,6 +26,10 @@ Deno.serve(async req => {
   try {
     const raw = await req.text(); if (raw.length > 8192) return json({ error: 'Request too large' }, 413);
     const body = JSON.parse(raw);
+    if (body.action === 'home') {
+      const { data, error } = await db.rpc('hundo_home'); check(error);
+      return json(data);
+    }
     if (body.action === 'challenge') {
       const wallet = new PublicKey(body.wallet).toBase58();
       const { count, error: countError } = await db.from('hundo_challenges').select('id', { count: 'exact', head: true }).eq('wallet', wallet).gt('expires_at', new Date().toISOString()); check(countError);
@@ -56,8 +60,8 @@ Deno.serve(async req => {
     if (!session) return json({ error: 'Сессия истекла. Подключи кошелёк заново' }, 401);
     const wallet = session.wallet;
     if (body.action === 'latest') {
-      const { data, error } = await db.from('hundo_rounds').select('id').order('starts_at', { ascending: true }).gt('starts_at', new Date(Date.now() - 150000).toISOString()).limit(1).maybeSingle(); check(error);
-      return json({ roundId: data?.id ?? null });
+      const { data, error } = await db.rpc('hundo_home'); check(error);
+      return json({ roundId: data?.round?.id ?? null });
     }
     if (body.action === 'archive') {
       const { data: round, error } = await db.from('hundo_rounds').select('id,starts_at').lt('starts_at', new Date(Date.now() - 150000).toISOString()).order('starts_at', { ascending: false }).limit(1).maybeSingle(); check(error);
@@ -67,6 +71,10 @@ Deno.serve(async req => {
       return json({ round, questions });
     }
     const roundId = uuid(body.roundId);
+    if (body.action === 'join-rehearsal') {
+      const { error } = await db.rpc('hundo_join_rehearsal', { p_round: roundId, p_wallet: wallet }); check(error);
+      return json({ joined: true });
+    }
     if (body.action === 'join') {
       if (typeof body.signature !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(body.signature)) throw new Error('Некорректная транзакция');
       const tx = await rpc.getParsedTransaction(body.signature, { commitment: 'finalized', maxSupportedTransactionVersion: 0 });
@@ -85,7 +93,8 @@ Deno.serve(async req => {
     }
     if (body.action === 'snapshot') {
       const { data, error } = await db.rpc('hundo_snapshot', { p_round: roundId, p_wallet: wallet }); check(error);
-      return json(data);
+      const { data: round, error: roundError } = await db.from('hundo_rounds').select('is_rehearsal').eq('id', roundId).single(); check(roundError);
+      return json({ ...data, isRehearsal: round.is_rehearsal });
     }
     return json({ error: 'Unknown action' }, 400);
   } catch (e) { return json({ error: e instanceof Error ? e.message : 'Ошибка запроса' }, 400); }
