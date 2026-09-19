@@ -12,7 +12,7 @@ import { Archive } from './Archive';
 
 type Screen = 'welcome' | 'lobby' | 'play' | 'final' | 'practice';
 const letters = ['A', 'B', 'C', 'D'];
-const C = { bg: '#11120F', panel: '#1D1F19', border: '#33362A', text: '#F4F5E9', muted: '#A5AB96', lime: '#D4FF62', purple: '#C9B5FF', danger: '#FFAD95' };
+const C = { bg: '#E8FF79', panel: '#F7FFD9', border: '#B5C66D', text: '#202020', muted: '#4C5438', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
 function Button({ title, onPress, secondary, disabled }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean }) {
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [s.button, secondary && s.secondary, (pressed || disabled) && { opacity: 0.5 }]}><Text style={[s.buttonText, secondary && { color: C.text }]}>{title}</Text></Pressable>;
 }
@@ -80,24 +80,24 @@ export function HundoApp() {
     else setScreen('lobby');
   }
   const won = alive && screen === 'final';
-  return <SafeAreaView style={s.safe}><StatusBar style="light" /><ScrollView contentContainerStyle={s.page}>
-    <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="На главный экран" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.lime }}>.</Text></Text></Pressable><View style={s.badge}><View style={s.dot} /><Text style={s.badgeText}>{screen === 'play' || screen === 'final' ? 'ДЕМО' : 'SEEKER FIRST'}</Text></View></View>
-    {screen === 'welcome' && <>
-      <Text style={s.eyebrow}>НЕ ЗНАЙ. ЧУВСТВУЙ.</Text>
-      <Text style={s.hero}>Думай{'\n'}как <Text style={{ color: C.lime }}>все.</Text>{'\n'}Забирай своё.</Text>
-      <Text style={s.body}>Правильный ответ — тот, который выберет большинство. Десять вопросов. Десять секунд на чутьё.</Text>
-      <View style={s.illustration}><View style={[s.tile, { transform: [{ rotate: '-9deg' }], backgroundColor: C.purple }]}><Text style={s.tileLabel}>ТВОЙ ВЫБОР</Text><Text style={s.tileNumber}>B ↗</Text></View><View style={[s.tile, { transform: [{ rotate: '8deg' }], backgroundColor: C.lime, marginTop: 35 }]}><Text style={s.tileLabel}>БОЛЬШИНСТВО</Text><Text style={s.tileNumber}>48%</Text></View></View>
-      <View style={s.spacer} /><Button title={busy ? 'Открываем кошелёк…' : 'Подключить кошелёк ↗'} onPress={connect} disabled={busy} /><Button title="Попробовать демораунд" onPress={startDemo} secondary />
-      <Text style={s.footnote}>Кошелёк нужен для эфира. Демо — без подключения и без денежных призов.</Text>
-    </>}
-    {screen === 'lobby' && <>
-      <Text style={s.eyebrow}>ЕЖЕДНЕВНОЕ ЧУТЬЁ</Text><Text style={s.title}>Твоя толпа.{'\n'}Твой момент.</Text>
-      {address ? <Text style={s.body}>Кошелёк {address.slice(0, 5)}…{address.slice(-5)} подключён · Devnet</Text> : <Button title="Подключить кошелёк" onPress={connect} disabled={busy} secondary />}
-      {API_URL && address ? <LiveRound address={address} /> : <View style={s.card}><Text style={s.eyebrow}>СЛЕДУЮЩИЙ ЭФИР</Text><Text style={s.large}>Скоро</Text><Text style={s.body}>Расписание появится после подключения игрового сервера и кошелька.</Text><View style={s.rule} /><View style={s.row}><View><Text style={s.small}>ПРИЗОВОЙ БАНК</Text><Text style={s.stat}>— SOL</Text></View><View><Text style={s.small}>В КОМНАТЕ</Text><Text style={s.stat}>—</Text></View></View></View>}
-      <View style={s.row}><Text style={s.pill}>10 вопросов</Text><Text style={s.pill}>10 секунд</Text><Text style={s.pill}>1 толпа</Text></View>
-      <Text style={s.body}>Угадывай выбор оставшихся игроков. Ошибся — оставайся смотреть. При равенстве голосов проходят оба лидирующих варианта.</Text>
-      <View style={s.spacer} /><Button title="Сыграть демораунд ↗" onPress={startDemo} /><Button title="Тренировка · вчерашний эфир" onPress={() => setScreen('practice')} secondary />
-      <Text style={s.footnote}>Банк хранится в публичном кошельке оператора. Выплаты можно будет проверить в Solana Explorer.</Text>
+  return <SafeAreaView style={s.safe}><StatusBar style="dark" /><ScrollView contentContainerStyle={s.page}>
+    <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="На главный экран" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{(screen === 'play' || screen === 'final') && <Text style={s.pill}>ДЕМО</Text>}</View>
+    {(screen === 'welcome' || screen === 'lobby') && <>
+      <Text style={s.eyebrow}>СЛЕДУЮЩАЯ ИГРА</Text>
+      <Text style={s.hero}>Скоро</Text>
+      <Text style={s.body}>Дата и время появятся после назначения игры.</Text>
+      <View style={s.prizeCard}>
+        <Text style={s.prizeLabel}>ПРИЗОВОЙ ФОНД</Text>
+        <Text adjustsFontSizeToFit numberOfLines={1} style={s.prizeAmount}>10 000 <Text style={s.prizeUnit}>SKR</Text></Text>
+        <Text style={s.prizeNote}>Макет призового фонда · эфир ещё не назначен</Text>
+      </View>
+      <View style={s.row}><Text style={s.pill}>10 вопросов</Text><Text style={s.pill}>10 секунд на ответ</Text></View>
+      <Text style={s.body}>Выбирай ответ, который выберет большинство игроков. Дойди до финала и раздели призовой фонд.</Text>
+      {address ? <Text style={s.body}>● Кошелёк {address.slice(0, 5)}…{address.slice(-5)} подключён · Devnet</Text> : <Button title={busy ? 'Открываем кошелёк…' : 'Подключить кошелёк ↗'} onPress={connect} disabled={busy} />}
+      {API_URL && address ? <LiveRound address={address} /> : null}
+      <Button title="Попробовать демо ↗" onPress={startDemo} secondary />
+      <Button title="Тренировка ↗" onPress={() => setScreen('practice')} secondary />
+      <Text style={s.footnote}>Демо — без денежных призов. Тренировка — по завершённым эфирам.</Text>
     </>}
     {screen === 'play' && <>
       <View style={s.row}><Text style={s.eyebrow}>ВОПРОС {String(phase.index + 1).padStart(2, '0')} / 10</Text><Text style={[s.pill, !alive && { color: C.purple }]}>{alive ? '● В игре' : '◉ Зритель'}</Text></View>
@@ -111,11 +111,11 @@ export function HundoApp() {
           <Text style={[s.letter, (selected || revealed && winner) && { color: C.lime }]}>{letters[i]}</Text><Text style={s.optionText}>{option}</Text>{revealed ? <Text style={s.percent}>{Math.round(counts[i] / total * 100)}%</Text> : selected && <Text style={{ color: C.lime }}>✓</Text>}
         </Pressable>;
       })}
-      <View accessibilityLiveRegion="polite" style={s.status}><Text style={[s.statusTitle, { color: alive ? C.lime : C.purple }]}>{phase.phase === 'result' ? alive ? 'Ты чувствуешь толпу ↗' : 'Теперь ты зритель' : !alive ? 'Смотри, что выберет толпа' : answers[phase.index] !== undefined ? 'Ответ принят. Ждём толпу.' : 'Доверься первому чувству.'}</Text><Text style={s.footnote}>{phase.phase === 'result' ? 'Демонстрационные голоса, не реальные игроки.' : 'Ответы скрыты до конца таймера.'}</Text></View>
+      <View accessibilityLiveRegion="polite" style={s.status}><Text style={[s.statusTitle, { color: C.purple }]}>{phase.phase === 'result' ? alive ? 'Ты угадал большинство ↗' : 'Теперь ты зритель' : !alive ? 'Смотри, что выберут игроки' : answers[phase.index] !== undefined ? 'Ответ принят. Ждём остальных.' : 'Доверься первому чувству.'}</Text><Text style={s.footnote}>{phase.phase === 'result' ? 'Демонстрационные голоса, не реальные игроки.' : 'Ответы скрыты до конца таймера.'}</Text></View>
       <View style={s.spacer} /><Text style={s.footnote}>ДЕМО · Без денежных призов · <Text onPress={leave} style={{ textDecorationLine: 'underline' }}>Выйти</Text></Text>
     </>}
     {screen === 'final' && <>
-      <Text style={s.eyebrow}>ДЕМОРАУНД ЗАВЕРШЁН</Text><Text style={s.hero}>{won ? 'На одной\nволне.' : 'Толпа\nудивляет.'}<Text style={{ color: C.lime }}>↗</Text></Text>
+      <Text style={s.eyebrow}>ДЕМОРАУНД ЗАВЕРШЁН</Text><Text style={s.hero}>{won ? 'На одной\nволне.' : 'Ещё\nпопробуем!'}<Text style={{ color: C.lime }}>↗</Text></Text>
       <View style={s.card}><Text style={s.eyebrow}>{won ? 'ТЫ ДОШЁЛ ДО ФИНАЛА' : 'ТВОЙ РЕЗУЛЬТАТ'}</Text><Text style={s.large}>{won ? '10 / 10' : `${eliminatedAt ?? 0} / 10`}</Text><Text style={s.body}>{won ? 'В настоящем эфире финалисты делят банк поровну.' : `Выбывание на вопросе ${(eliminatedAt ?? 0) + 1}. Завтра — ещё один шанс почувствовать большинство.`}</Text><View style={s.rule} /><Text style={s.body}>Это демо: денежного банка и транзакций выплат здесь нет.</Text></View>
       <View style={s.spacer} /><Button title="Попробовать ещё раз ↗" onPress={startDemo} /><Button title="В комнату ожидания" onPress={() => setScreen('lobby')} secondary />
     </>}
@@ -126,6 +126,7 @@ export function HundoApp() {
   </ScrollView></SafeAreaView>;
 }
 const s = StyleSheet.create({
+  prizeCard: { backgroundColor: C.purple, padding: 24, borderRadius: 20, gap: 12, marginVertical: 6 }, prizeLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }, prizeAmount: { color: '#E8FF79', fontSize: 62, fontWeight: '900', letterSpacing: -2 }, prizeUnit: { fontSize: 28, letterSpacing: 0 }, prizeNote: { color: '#FFFFFF', fontSize: 12, lineHeight: 18 },
   safe: { flex: 1, backgroundColor: C.bg }, page: { flexGrow: 1, padding: 24, paddingTop: 12, gap: 14, maxWidth: 600, width: '100%', alignSelf: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }, wordmark: { color: C.text, fontSize: 38, fontWeight: '900', letterSpacing: -2 }, badge: { flexDirection: 'row', gap: 7, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderRadius: 20, padding: 9 }, dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.lime }, badgeText: { color: C.text, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
   eyebrow: { color: C.muted, fontSize: 11, letterSpacing: 1.7, fontWeight: '700' }, hero: { color: C.text, fontSize: 49, lineHeight: 51, letterSpacing: -2.3, fontWeight: '900' }, title: { color: C.text, fontSize: 42, lineHeight: 46, fontWeight: '800', letterSpacing: -1.5 }, body: { color: C.muted, fontSize: 15, lineHeight: 23 },
