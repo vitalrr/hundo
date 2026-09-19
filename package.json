@@ -7,7 +7,9 @@
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "build:apk": "eas build --platform android --profile preview"
+    "build:apk": "eas build --platform android --profile preview",
+    "build:local": "bash scripts/build-preview.sh",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",

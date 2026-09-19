@@ -4,10 +4,10 @@
     "slug": "hundo",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/hundo-icon.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/hundo-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#11120F"
     },
@@ -20,13 +20,13 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/hundo-icon.png",
         "backgroundColor": "#11120F"
       },
       "package": "app.hundo.mobile"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/hundo-icon.png"
     },
     "scheme": "hundo"
   }
