@@ -12,6 +12,8 @@ const hash = async (s: string) => Buffer.from(await crypto.subtle.digest('SHA-25
 function check(error: unknown) { if (error) throw new Error('Не удалось обработать запрос'); }
 function uuid(value: unknown): string { if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new Error('Некорректный ID'); return value; }
 function verifySignedMessage(payload: Uint8Array, message: Uint8Array, key: Uint8Array) {
+  // Some wallets return a detached Ed25519 signature. Always verify the stored challenge.
+  if (payload.length === 64) return nacl.sign.detached.verify(message, payload, key);
   // MWA returns a signed payload. Support signature-prefix and signature-suffix encodings.
   if (payload.length !== message.length + 64) return false;
   const equal = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
@@ -36,7 +38,11 @@ Deno.serve(async req => {
     if (body.action === 'authenticate') {
       const id = uuid(body.id);
       const { data: challenge, error } = await db.from('hundo_challenges').select('*').eq('id', id).gt('expires_at', new Date().toISOString()).maybeSingle(); check(error);
-      if (!challenge || typeof body.signedMessage !== 'string' || !verifySignedMessage(Buffer.from(body.signedMessage, 'base64'), encoder.encode(challenge.message), new PublicKey(challenge.wallet).toBytes())) return json({ error: 'Подпись не прошла проверку' }, 401);
+      if (!challenge) return json({ error: 'Запрос входа истёк или уже использован. Подключись заново.' }, 401);
+      if (typeof body.signedMessage !== 'string') return json({ error: 'Кошелёк не вернул подпись' }, 401);
+      const payload = Buffer.from(body.signedMessage, 'base64');
+      const message = encoder.encode(challenge.message);
+      if (!verifySignedMessage(payload, message, new PublicKey(challenge.wallet).toBytes())) return json({ error: `Подпись не прошла проверку (формат ${payload.length}/${message.length}).` }, 401);
       // DELETE RETURNING makes each challenge consumable exactly once, even under concurrent requests.
       const { data: consumed, error: consumeError } = await db.from('hundo_challenges').delete().eq('id', id).gt('expires_at', new Date().toISOString()).select('id'); check(consumeError);
       if (consumed?.length !== 1) return json({ error: 'Запрос входа уже использован' }, 401);
