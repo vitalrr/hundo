@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Buffer } from 'buffer';
@@ -80,19 +80,20 @@ export function HundoApp() {
     else setScreen('lobby');
   }
   const won = alive && screen === 'final';
-  return <SafeAreaView style={s.safe}><StatusBar style="dark" /><ScrollView contentContainerStyle={s.page}>
+  return <SafeAreaView style={s.safe}><Image source={require('../../assets/home-gradient.png')} style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]} resizeMode="stretch" pointerEvents="none" accessible={false} /><StatusBar style="dark" /><ScrollView contentContainerStyle={s.page}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="На главный экран" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{(screen === 'play' || screen === 'final') && <Text style={s.pill}>ДЕМО</Text>}</View>
     {(screen === 'welcome' || screen === 'lobby') && <>
-      <Text style={s.eyebrow}>СЛЕДУЮЩАЯ ИГРА</Text>
-      <Text style={s.hero}>Скоро</Text>
-      <Text style={s.body}>Дата и время появятся после назначения игры.</Text>
-      <View style={s.prizeCard}>
-        <Text style={s.prizeLabel}>ПРИЗОВОЙ ФОНД</Text>
-        <Text adjustsFontSizeToFit numberOfLines={1} style={s.prizeAmount}>10 000 <Text style={s.prizeUnit}>SKR</Text></Text>
-        <Text style={s.prizeNote}>Макет призового фонда · эфир ещё не назначен</Text>
+      <View style={s.homeHero}>
+        <Text style={s.eyebrow}>СЛЕДУЮЩАЯ ИГРА</Text>
+        <Text style={s.homeTime}>СКОРО</Text>
+        <Text style={s.scheduleNote}>Дата и время появятся после назначения игры</Text>
+        <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>10 000 <Text style={s.homeUnit}>SKR</Text></Text>
       </View>
-      <View style={s.row}><Text style={s.pill}>10 вопросов</Text><Text style={s.pill}>10 секунд на ответ</Text></View>
-      <Text style={s.body}>Выбирай ответ, который выберет большинство игроков. Дойди до финала и раздели призовой фонд.</Text>
+      <View style={s.rulesPanel}>
+        <Text style={s.rulesText}>Выбирай ответ, который выберет большинство игроков.</Text>
+        <View style={s.rulesDivider} />
+        <View style={s.row}><Text style={s.rulesMetric}>10 вопросов</Text><Text style={s.rulesMetric}>10 секунд на ответ</Text></View>
+      </View>
       {address ? <Text style={s.body}>● Кошелёк {address.slice(0, 5)}…{address.slice(-5)} подключён · Devnet</Text> : <Button title={busy ? 'Открываем кошелёк…' : 'Подключить кошелёк ↗'} onPress={connect} disabled={busy} />}
       {API_URL && address ? <LiveRound address={address} /> : null}
       <Button title="Попробовать демо ↗" onPress={startDemo} secondary />
@@ -126,6 +127,7 @@ export function HundoApp() {
   </ScrollView></SafeAreaView>;
 }
 const s = StyleSheet.create({
+  homeHero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 20 }, homeTime: { color: C.text, fontSize: 52, fontWeight: '900', letterSpacing: -2, textAlign: 'center' }, scheduleNote: { color: C.muted, fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 240 }, homePrize: { color: C.purple, fontSize: 76, fontWeight: '900', letterSpacing: -4, textAlign: 'center', width: '100%', marginTop: 18 }, homeUnit: { fontSize: 32, letterSpacing: -1 }, rulesPanel: { backgroundColor: '#FFFFFF55', borderRadius: 24, padding: 22, gap: 18, marginBottom: 6 }, rulesText: { color: C.text, fontSize: 17, lineHeight: 24, textAlign: 'center', fontWeight: '500' }, rulesDivider: { height: 1, backgroundColor: '#20202014' }, rulesMetric: { color: C.muted, fontSize: 13, fontWeight: '600' },
   prizeCard: { backgroundColor: C.purple, padding: 24, borderRadius: 20, gap: 12, marginVertical: 6 }, prizeLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }, prizeAmount: { color: '#E8FF79', fontSize: 62, fontWeight: '900', letterSpacing: -2 }, prizeUnit: { fontSize: 28, letterSpacing: 0 }, prizeNote: { color: '#FFFFFF', fontSize: 12, lineHeight: 18 },
   safe: { flex: 1, backgroundColor: C.bg }, page: { flexGrow: 1, padding: 24, paddingTop: 12, gap: 14, maxWidth: 600, width: '100%', alignSelf: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }, wordmark: { color: C.text, fontSize: 38, fontWeight: '900', letterSpacing: -2 }, badge: { flexDirection: 'row', gap: 7, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderRadius: 20, padding: 9 }, dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.lime }, badgeText: { color: C.text, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
