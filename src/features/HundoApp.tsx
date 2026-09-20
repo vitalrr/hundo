@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Buffer } from 'buffer';
@@ -16,7 +16,7 @@ import { resultOutcome } from '../game/presentation';
 
 type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'practice';
 const letters = ['A', 'B', 'C', 'D'];
-const C = { bg: '#DFEBC2', panel: '#F7FFD9', border: '#B5C66D', text: '#202020', muted: '#4C5438', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
+const C = { bg: '#C59AFF', panel: '#F2E7FF', border: '#A77BD5', text: '#202020', muted: '#514063', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
 function Button({ title, onPress, secondary, disabled }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean }) {
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [s.button, secondary && s.secondary, (pressed || disabled) && { opacity: 0.5 }]}><Text style={[s.buttonText, secondary && { color: C.text }]}>{title}</Text></Pressable>;
 }
@@ -73,12 +73,13 @@ export function HundoApp() {
   async function connect() {
     setBusy(true);
     try {
-      const account = await wallet.connect();
-      const publicKey = account.publicKey.toBase58();
-      if (API_URL) {
+      const account = API_URL ? await wallet.connectAndSign(async publicKey => {
         const challenge = await request<{ id: string; message: string }>('challenge', { wallet: publicKey });
-        const signed = await wallet.signMessage(Buffer.from(challenge.message, 'utf8'));
-        const verified = await request<{ token: string }>('authenticate', { id: challenge.id, signedMessage: Buffer.from(signed).toString('base64') });
+        return { message: Buffer.from(challenge.message, 'utf8'), id: challenge.id };
+      }) : { account: await wallet.connect(), signedMessage: null, id: '' };
+      const publicKey = account.account.publicKey.toBase58();
+      if (account.signedMessage) {
+        const verified = await request<{ token: string }>('authenticate', { id: account.id, signedMessage: Buffer.from(account.signedMessage).toString('base64') });
         setSession(verified.token);
       }
       setAddress(publicKey); setScreen('lobby');
@@ -93,7 +94,7 @@ export function HundoApp() {
   const won = alive && screen === 'final';
   const demoStage = screen === 'play' || screen === 'countdown';
   const spectator = !alive && !(phase.phase === 'result' && eliminatedAt === phase.index);
-  return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/>{!demoStage&&<Image source={require('../../assets/home-gradient.png')} style={[StyleSheet.absoluteFillObject, { width: '100%', height: '100%' }]} resizeMode="stretch" accessible={false} />}<SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onAnswer={value=>answer(value as Choice)} onExit={leave}/>:<ScrollView contentContainerStyle={s.page}>
+  return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onAnswer={value=>answer(value as Choice)} onExit={leave}/>:<ScrollView contentContainerStyle={s.page}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{screen === 'final' && <Text style={s.pill}>DEMO</Text>}</View>
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>

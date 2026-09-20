@@ -3,5 +3,5 @@ import type { SignInPayload } from '@solana-mobile/mobile-wallet-adapter-protoco
 import type { Transaction, VersionedTransaction } from '@solana/web3.js';
 const nativeOnly = async (): Promise<never> => { throw new Error('Connect your wallet in the hundo Android app. You can try the demo here.'); };
 export function useMobileWallet() {
- return { connect: ():Promise<Account>=>nativeOnly(), signIn:(_payload:SignInPayload):Promise<Account>=>nativeOnly(), disconnect:():Promise<void>=>nativeOnly(), signMessage:(_message:Uint8Array):Promise<Uint8Array>=>nativeOnly(), signAndSendTransaction:(_tx:Transaction|VersionedTransaction,_slot:number):Promise<string>=>nativeOnly() };
+ return { connectAndSign: (_challenge: (publicKey: string) => Promise<{message: Uint8Array; id: string}>): Promise<{account: Account; id: string; signedMessage: Uint8Array}> => nativeOnly(), connect: ():Promise<Account>=>nativeOnly(), signIn:(_payload:SignInPayload):Promise<Account>=>nativeOnly(), disconnect:():Promise<void>=>nativeOnly(), signMessage:(_message:Uint8Array):Promise<Uint8Array>=>nativeOnly(), signAndSendTransaction:(_tx:Transaction|VersionedTransaction,_slot:number):Promise<string>=>nativeOnly() };
 }
