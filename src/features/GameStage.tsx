@@ -37,7 +37,7 @@ export function GameStage(p: Props) {
   {p.outcome==='spectator'&&<View style={s.spectatorBanner}><Text style={s.spectatorTitle}>YOU’RE WATCHING</Text><Text style={s.spectatorNote}>Your run is over. See who makes the final.</Text></View>}
   <View style={s.row}><Text style={s.kicker}>QUESTION {String(p.index+1).padStart(2,'0')} / 10</Text><Text style={s.badge}>{p.alive&&p.joined?'● PLAYING':'◉ WATCHING'}</Text></View>
   <View style={s.progress}>{Array.from({length:10},(_,i)=><View key={i} style={[s.segment,i<=p.index&&{backgroundColor:purple}]}/>)}</View>
-  <View style={[s.row,s.timerRow]}><Animated.View style={[s.digits,{transform:[{scale}]}]}><Text allowFontScaling={false} style={[s.timer,urgent&&{color:red}]}>{String(p.seconds).padStart(2,'0')}</Text><Text style={s.seconds}>sec</Text></Animated.View><Text style={s.prompt}>{revealed?'NEXT QUESTION\nIN':'TRUST YOUR\nFIRST INSTINCT'}</Text></View>
+  <View style={[s.row,s.timerRow]}><View style={s.digits}><Text allowFontScaling={false} style={[s.timer,urgent&&{color:red}]}>{String(p.seconds).padStart(2,'0')}</Text><Text style={s.seconds}>sec</Text></View><Text style={s.prompt}>{revealed?'NEXT QUESTION\nIN':'TRUST YOUR\nFIRST INSTINCT'}</Text></View>
   <View style={s.timeTrack}><View style={[s.timeFill,{width:`${Math.max(0,Math.min(100,p.remainingMs/(revealed?5000:10000)*100))}%`,backgroundColor:urgent?red:purple}]}/></View>
   <Text style={s.question}>{p.question?.text ?? 'Loading question…'}</Text>
   {p.question?.options.map((option,i)=>{

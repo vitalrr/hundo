@@ -24,6 +24,8 @@ The simulated client is `node scripts/rehearsal-player.cjs <round-id>`. It only 
 
 ## Preview 0.2
 
+September 20 follow-up: round `9d5b03c4-6877-4377-b98d-c1038bab8cf6` started at 13:27:30 UTC. The Seeker and the simulated Mac client both answered A on all ten questions. Each reveal contained `[2,0,0,0]`, and the final reported two finalists out of two. The user confirmed the phone flow worked. No payments were sent. Follow-up fixes address clock jitter, immediate local answer selection while the server confirms, and Android system-bar backgrounds. The live game now uses an absolute full-screen layer in the main app window rather than a native modal with separate system bars. These follow-up fixes still require Seeker verification.
+
 Live rounds now open a full-screen modal during the final 15 seconds of the lobby and remain full-screen for questions and results. The live controller stays mounted when the user explores the demo. Demo and live rounds share `GameStage`: pale-purple play, gray-lilac spectator mode, large timer digits, and purple/red answer feedback. The countdown includes an original coin animation and synthesized audio cues with a mute control. Audio pauses in the background; this is an in-app transition, not a lockscreen alarm or takeover of other apps.
 
 The home retains its original lime gradient and the requested display prize, with EVERY DAY below it. The gradient is outside the safe-area container so it covers the bottom inset; Android navigation colors follow each screen. Timer digits use separate text layout with padding to avoid Android font clipping. The app icon is purple h. on lime; adaptive Android foreground art has its own safe margin.

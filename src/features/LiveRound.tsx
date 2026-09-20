@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, BackHandler, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Connection, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import { request } from '../services/api';
@@ -28,6 +28,8 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  useEffect(()=>{const listener=AppState.addEventListener('change',value=>setForeground(value==='active'));return()=>listener.remove();},[]);
  const wallet=useMobileWallet();const [roundId,setRoundId]=useState<string|null>(null);const [state,setState]=useState<Snapshot|null>(null);
  const snapshotRef=useRef(state);snapshotRef.current=state;
+ const [localAnswer,setLocalAnswer]=useState<{round:string;index:number;choice:number}|null>(null);
+ const submitting=useRef(false);
  const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [balance,setBalance]=useState<number|null>(null);
  const [,setTick]=useState(0);const synced=useRef({at:0,time:0});const pendingEntry=useRef<{round:string;signature:string}|null>(null);
  useEffect(()=>{const timer=setInterval(()=>setTick(n=>n+1),200);return()=>clearInterval(timer);},[]);
@@ -40,7 +42,7 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
      const latest=await request<{roundId:string|null}>('latest');
      if(latest.roundId&&latest.roundId!==id){id=latest.roundId;if(!stopped){setRoundId(id);setDismissed(null);}}
     }
-    if(id){const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){synced.current={at:performance.now(),time:Date.parse(next.serverTime)};setState(next);}}
+    if(id){const sent=performance.now();const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){const received=performance.now();const estimated=Date.parse(next.serverTime)+(received-sent)/2;const previous=synced.current.time+received-synced.current.at;synced.current={at:received,time:synced.current.time?previous+Math.min(100,Math.max(0,estimated-previous)):estimated};setState(next);}}
     if(!stopped)setError('');
    }catch(e){if(!stopped)setError(e instanceof Error?e.message:'Connection unavailable');}
    finally{if(!stopped)timer=setTimeout(poll,1000);}
@@ -69,7 +71,15 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
   }catch(e){Alert.alert('Join the game',e instanceof Error?e.message:'Could not join the game');}
   finally{setBusy(false);}
  }
- async function answer(choice:number){if(!state)return;setBusy(true);try{await request('answer',{roundId:state.roundId,index:state.index,choice});setState(current=>current?.index===state.index?{...current,myChoice:choice}:current);setError('');}catch(e){setError(e instanceof Error?e.message:'Answer not accepted');}finally{setBusy(false);}}
+ async function answer(choice:number){
+  if(!state||submitting.current||state.phase!=='question'||state.myChoice!==null||!state.joined||state.eliminatedAt!==null)return;
+  const selected={round:state.roundId,index:state.index,choice};
+  submitting.current=true;setLocalAnswer(selected);setBusy(true);setError('');
+  try{await request('answer',{roundId:selected.round,index:selected.index,choice});}
+  catch(e){setLocalAnswer(current=>current===selected?null:current);setError(e instanceof Error?e.message:'Answer not accepted');}
+  finally{submitting.current=false;setBusy(false);}
+ }
+ const displayedChoice=state?.myChoice??(state&&state.phase==='question'&&localAnswer?.round===state.roundId&&localAnswer.index===state.index?localAnswer.choice:null);
  const stale=performance.now()-synced.current.at>3000;
  const serverNow=synced.current.time+performance.now()-synced.current.at;
  const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*15000+(state.phase==='question'?10000:15000)):0;
@@ -77,6 +87,8 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  const remaining=Math.ceil(remainingMs/1000);
  const visible=open||!!(state&&dismissed!==state.roundId&&shouldTakeOver(state.phase,remaining));
  useEffect(()=>{onVisibilityChange(visible);return()=>onVisibilityChange(false);},[visible,onVisibilityChange]);
+ useEffect(()=>{if(visible)onTakeOver();},[visible]);
+ useEffect(()=>{if(!visible)return;const listener=BackHandler.addEventListener('hardwareBackPress',()=>{close();return true;});return()=>listener.remove();},[visible,state,dismissed]);
  function close(){
   if(state&&state.phase!=='final'&&shouldTakeOver(state.phase,remaining)){
    if(Platform.OS==='web'){if(window.confirm('Leave the live game? Missing an answer means elimination.')){setDismissed(state.roundId);onClose();}return;}
@@ -87,12 +99,13 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  const watching=state&&(!state.joined||state.eliminatedAt!==null)&&!(state.phase==='result'&&state.eliminatedAt===state.index);
  const background=watching?'#E7E7EF':'#EFE7FF';
 
- return <Modal visible={visible} animationType="fade" presentationStyle="fullScreen" onShow={onTakeOver} onRequestClose={close}>
+ if(!visible)return null;
+ return <View style={[StyleSheet.absoluteFillObject,{backgroundColor:background,zIndex:100,elevation:20}]}>
   <SafeAreaView style={{flex:1,backgroundColor:background}}><SystemChrome active={visible} color={background}/><StatusBar style="dark"/>
   {visible&&foreground&&stage&&state ? <GameStage phase={state.phase} index={state.index} seconds={remaining} remainingMs={remainingMs}
-   question={state.question} choice={state.myChoice} counts={state.counts} leaders={state.leaders}
+   question={state.question} choice={displayedChoice} counts={state.counts} leaders={state.leaders}
    alive={state.eliminatedAt===null} joined={state.joined} outcome={resultOutcome(state.joined,state.eliminatedAt,state.index)}
-   disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||state.myChoice!==null}
+   disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||displayedChoice!==null}
    pending={busy} error={error} stale={stale} playerCount={state.playerCount} survivorCount={state.survivorCount} onAnswer={choice=>void answer(choice)} onExit={close}
   /> : visible&&state?.phase==='final'&&state.joined&&state.eliminatedAt===null ? <ScrollView contentContainerStyle={s.page}><Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text><WinnerResult rehearsal={state.isRehearsal} finalists={state.survivorCount} players={state.playerCount} payout={state.payouts?.find(p=>p.wallet===address)} onHome={close}/></ScrollView> : <ScrollView contentContainerStyle={s.page}>
    <Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text>
@@ -118,7 +131,7 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    <Pressable accessibilityRole="button" style={s.back} onPress={close}><Text style={s.link}>Back to home</Text></Pressable>
   </ScrollView>}
   </SafeAreaView>
- </Modal>;
+ </View>;
 }
 const s=StyleSheet.create({
  page:{padding:24,gap:20,flexGrow:1,maxWidth:600,width:'100%',alignSelf:'center'},wordmark:{fontSize:38,fontWeight:'900',letterSpacing:-2,color:'#202020'},

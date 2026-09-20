@@ -126,7 +126,7 @@ export function HundoApp() {
       <Text style={s.eyebrow}>BETWEEN GAMES</Text><Text style={s.title}>Read the{'\n'}room.</Text>{API_URL && address ? <Archive /> : <View style={s.card}><Text style={s.stat}>The first game is coming</Text><Text style={s.body}>Connect your wallet to replay past questions with recorded voting results once the first game ends.</Text></View>}<Text style={s.body}>Learn the rules in a demo. Its votes are simulated, not recorded from past games.</Text><View style={s.spacer} /><Button title="Play the demo ↗" onPress={startDemo} /><Button title="Back" onPress={() => setScreen('lobby')} secondary />
     </>}
     {busy && <ActivityIndicator color={C.lime} style={{ marginTop: 10 }} />}
-  </ScrollView>}{API_URL&&address?<LiveRound address={address} open={liveOpen} onClose={()=>setLiveOpen(false)} onTakeOver={()=>setScreen('lobby')} onVisibilityChange={setLiveVisible}/>:null}</SafeAreaView></View>;
+  </ScrollView>}</SafeAreaView>{API_URL&&address?<LiveRound address={address} open={liveOpen} onClose={()=>setLiveOpen(false)} onTakeOver={()=>setScreen('lobby')} onVisibilityChange={setLiveVisible}/>:null}</View>;
 }
 const s = StyleSheet.create({
   daily: {color:C.purple,fontSize:12,fontWeight:'800',letterSpacing:2,marginTop:-4}, metricsRow:{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:16,flexWrap:'wrap'}, metricsDot:{color:C.purple,fontSize:25,fontWeight:'900'},
