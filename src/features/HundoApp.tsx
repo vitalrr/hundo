@@ -11,6 +11,7 @@ import { LiveRound } from './LiveRound';
 import { Archive } from './Archive';
 import { useHome } from '../services/useHome';
 import { GameStage } from './GameStage';
+import { WinnerResult } from './WinnerResult';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome } from '../game/presentation';
 
@@ -94,7 +95,7 @@ export function HundoApp() {
   const won = alive && screen === 'final';
   const demoStage = screen === 'play' || screen === 'countdown';
   const spectator = !alive && !(phase.phase === 'result' && eliminatedAt === phase.index);
-  return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onAnswer={value=>answer(value as Choice)} onExit={leave}/>:<ScrollView contentContainerStyle={s.page}>
+  return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onPreviewWinner={()=>{setEliminatedAt(null);setScreen('final');}} onAnswer={value=>answer(value as Choice)} onExit={leave}/>:<ScrollView contentContainerStyle={s.page}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{screen === 'final' && <Text style={s.pill}>DEMO</Text>}</View>
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>
@@ -115,7 +116,8 @@ export function HundoApp() {
       <Button title="See how it works ↗" onPress={startDemo} secondary />
       <Text style={s.footnote}>A quick walkthrough of the game.</Text>
     </>}
-    {screen === 'final' && <>
+    {won && <WinnerResult demo onHome={()=>setScreen('lobby')}/>}
+    {screen === 'final' && !won && <>
       <Text style={s.eyebrow}>DEMO COMPLETE</Text><Text style={s.hero}>{won ? 'On the same\nwavelength.' : 'Try your\ninstincts again.'}<Text style={{ color: C.lime }}>↗</Text></Text>
       <View style={s.card}><Text style={s.eyebrow}>{won ? 'YOU MADE THE FINAL' : 'YOUR RESULT'}</Text><Text style={s.large}>{won ? '10 / 10' : `${eliminatedAt ?? 0} / 10`}</Text><Text style={s.body}>{won ? 'In a live game, finalists split the prize pool equally.' : `Eliminated on question ${(eliminatedAt ?? 0) + 1}. Another game, another chance to read the room.`}</Text><View style={s.rule} /><Text style={s.body}>This is a demo. There are no cash prizes or payouts.</Text></View>
       <View style={s.spacer} /><Button title="Try again ↗" onPress={startDemo} /><Button title="Back to lobby" onPress={() => setScreen('lobby')} secondary />

@@ -8,6 +8,7 @@ import { useMobileWallet } from '../utils/useMobileWallet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { GameStage } from './GameStage';
+import { WinnerResult } from './WinnerResult';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome, shouldTakeOver } from '../game/presentation';
 
@@ -93,7 +94,7 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    alive={state.eliminatedAt===null} joined={state.joined} outcome={resultOutcome(state.joined,state.eliminatedAt,state.index)}
    disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||state.myChoice!==null}
    pending={busy} error={error} stale={stale} playerCount={state.playerCount} survivorCount={state.survivorCount} onAnswer={choice=>void answer(choice)} onExit={close}
-  /> : <ScrollView contentContainerStyle={s.page}>
+  /> : visible&&state?.phase==='final'&&state.joined&&state.eliminatedAt===null ? <ScrollView contentContainerStyle={s.page}><Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text><WinnerResult rehearsal={state.isRehearsal} finalists={state.survivorCount} players={state.playerCount} payout={state.payouts?.find(p=>p.wallet===address)} onHome={close}/></ScrollView> : <ScrollView contentContainerStyle={s.page}>
    <Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text>
    <Text style={s.tag}>{state?.isRehearsal?'LIVE REHEARSAL':'LIVE GAME · DEVNET'}</Text>
    {error?<Text style={s.error}>{error}</Text>:null}

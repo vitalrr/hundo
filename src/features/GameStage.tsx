@@ -11,7 +11,7 @@ type Props = {
  alive: boolean; joined: boolean; outcome: 'correct' | 'out' | 'spectator';
  disabled?: boolean; pending?: boolean; error?: string; stale?: boolean;
  demo?: boolean; playerCount?: number; survivorCount?: number;
- onAnswer: (choice: number) => void; onExit: () => void;
+ onAnswer: (choice: number) => void; onExit: () => void; onPreviewWinner?: () => void;
 };
 const purple = '#7047EB', red = '#D72C42', ink = '#202020';
 export function GameStage(p: Props) {
@@ -27,7 +27,7 @@ export function GameStage(p: Props) {
  const revealed = p.phase === 'result';
  const total = p.counts?.reduce((sum, n) => sum + n, 0) || 1;
  const urgent = p.phase === 'question' && p.seconds <= 3;
- const footer = <View style={s.footer}><Text style={s.note}>{p.demo ? 'DEMO · Simulated votes' : `${p.playerCount ?? 0} joined · ${p.survivorCount ?? 0} still playing`}</Text><Pressable accessibilityRole="button" onPress={p.onExit}><Text style={s.exit}>Leave game</Text></Pressable></View>;
+ const footer = <View style={s.footer}><Text style={s.note}>{p.demo ? 'DEMO · Simulated votes' : `${p.playerCount ?? 0} joined · ${p.survivorCount ?? 0} still playing`}</Text>{p.demo&&p.onPreviewWinner?<Pressable accessibilityRole="button" onPress={p.onPreviewWinner}><Text style={s.exit}>Preview winning screen ↗</Text></Pressable>:null}<Pressable accessibilityRole="button" onPress={p.onExit}><Text style={s.exit}>Leave game</Text></Pressable></View>;
  const controls = <View style={s.header}><Text style={s.logo}>hundo<Text style={{color:purple}}>.</Text></Text><Pressable accessibilityRole="button" accessibilityLabel={sound?'Mute game audio':'Enable game audio'} onPress={()=>setSound(v=>!v)} style={s.sound}><Text style={s.soundText}>{!sound?'SOUND OFF':audioState==='unavailable'?'SOUND UNAVAILABLE':'SOUND ON'}</Text></Pressable></View>;
  if (p.phase === 'lobby') return <ScrollView contentContainerStyle={s.page}>
   {controls}<View style={s.countdownCenter}><Text style={s.kicker}>GET READY</Text><Animated.View style={[s.countdownBox,{transform:[{scale}]}]}><Text allowFontScaling={false} style={s.countdown}>{p.seconds > 0 ? p.seconds : 'GO'}</Text></Animated.View><CountdownCoins seconds={p.seconds}/><Text style={s.countdownTitle}>{p.joined?'You’re in. Trust your instinct.':'Watch the game live.'}</Text><Text style={s.note}>{p.stale?'Reconnecting to the game…':p.seconds===0?'Waiting for the first question…':'The game is about to begin'}</Text></View>{footer}
