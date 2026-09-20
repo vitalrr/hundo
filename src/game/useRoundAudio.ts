@@ -13,7 +13,7 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
     void Asset.loadAsync([
       require('../../assets/audio/pulse.wav'), require('../../assets/audio/tick.wav'),
       require('../../assets/audio/start.wav'), require('../../assets/audio/correct.wav'),
-      require('../../assets/audio/out.wav'),
+      require('../../assets/audio/out.wav'), require('../../assets/audio/countdown.wav'),
     ]).then(assets => {
       if (mounted) setSources(assets.map(asset => audioFileUri(asset.localUri ?? asset.uri, Platform.OS)));
     }).catch(() => { if (mounted) setLoadError(true); });
@@ -24,6 +24,9 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
   const start = useAudioPlayer(sources[2] ? {uri: sources[2]} : null);
   const correct = useAudioPlayer(sources[3] ? {uri: sources[3]} : null);
   const out = useAudioPlayer(sources[4] ? {uri: sources[4]} : null);
+  const countdown = useAudioPlayer(sources[5] ? {uri: sources[5]} : null);
+  const secondsRef = useRef(seconds);
+  secondsRef.current = seconds;
   const tickStatus = useAudioPlayerStatus(tick);
   const startStatus = useAudioPlayerStatus(start);
   const correctStatus = useAudioPlayerStatus(correct);
@@ -39,15 +42,27 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
   }, []);
   const audible = enabled && foreground && ready;
   useEffect(() => {
+    // Do not pause on transient isLoaded events: Android emits false when
+    // buffering ends, even though the prepared player can keep playing.
     try {
       pulse.loop = true; pulse.volume = .3;
-      if (audible && (phase === 'lobby' || phase === 'question') && pulseStatus.isLoaded) pulse.play();
+      if (audible && phase === 'question' && sources.length) pulse.play();
       else pulse.pause();
       if (!audible) { tick.pause(); start.pause(); correct.pause(); out.pause(); }
     } catch { /* Audio must never block gameplay. */ }
-  }, [audible, phase, pulseStatus.isLoaded, pulse, tick, start, correct, out]);
+  }, [audible, phase, sources.length, pulse, tick, start, correct, out]);
   useEffect(() => {
-    const countdownTick = (phase === 'lobby' && seconds <= 15 || phase === 'question' && seconds <= 9) && seconds > 0;
+    let cancelled = false;
+    if (audible && phase === 'lobby' && sources.length) {
+      countdown.volume = .7;
+      void countdown.seekTo(Math.max(0, 15 - secondsRef.current)).then(() => {
+        if (!cancelled) countdown.play();
+      }).catch(() => {});
+    } else countdown.pause();
+    return () => { cancelled = true; countdown.pause(); };
+  }, [audible, phase, sources.length, countdown]);
+  useEffect(() => {
+    const countdownTick = (phase === 'question' && seconds <= 9) && seconds > 0;
     const key = countdownTick ? `${phase}:${index}:${seconds}` : `${phase}:${index}:${outcome}`;
     if (key === lastCue.current) return;
     if (!audible) return;

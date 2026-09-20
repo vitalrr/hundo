@@ -33,3 +33,12 @@ for i, frequency in enumerate([261.63, 329.63, 392, 523.25, 440, 392, 329.63, 39
     notes.append((i * .5, .32, frequency, .22))
     notes.append((i * .5, .18, 65.41 if i < 4 else 55, .3))
 make('pulse.wav', 4, notes)
+
+# One mixed track keeps Android audio focus on a single player throughout
+# the countdown; independent tick players can interrupt the music.
+countdown = []
+for repeat in range(4):
+    countdown.extend((start + repeat * 4, length, frequency, volume * .75)
+                     for start, length, frequency, volume in notes)
+countdown.extend((second, .13, 880, .3) for second in range(15))
+make('countdown.wav', 15, countdown)
