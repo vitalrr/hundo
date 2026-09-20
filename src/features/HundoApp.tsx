@@ -16,7 +16,7 @@ import { resultOutcome } from '../game/presentation';
 
 type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'practice';
 const letters = ['A', 'B', 'C', 'D'];
-const C = { bg: '#C59AFF', panel: '#F2E7FF', border: '#A77BD5', text: '#202020', muted: '#514063', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
+const C = { bg: '#E8FF79', panel: '#F7FFD9', border: '#B5C66D', text: '#202020', muted: '#4C5438', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
 function Button({ title, onPress, secondary, disabled }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean }) {
   return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={({ pressed }) => [s.button, secondary && s.secondary, (pressed || disabled) && { opacity: 0.5 }]}><Text style={[s.buttonText, secondary && { color: C.text }]}>{title}</Text></Pressable>;
 }
