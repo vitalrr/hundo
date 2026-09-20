@@ -1,14 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Vibration } from 'react-native';
+import { AppState, Platform, Vibration } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { Asset } from 'expo-asset';
+import { audioFileUri } from './audioSource';
 import type { StagePhase } from './presentation';
 
 export function useRoundAudio(phase: StagePhase, index: number, seconds: number, outcome: string, enabled: boolean) {
-  const pulse = useAudioPlayer(require('../../assets/audio/pulse.wav'));
-  const tick = useAudioPlayer(require('../../assets/audio/tick.wav'));
-  const start = useAudioPlayer(require('../../assets/audio/start.wav'));
-  const correct = useAudioPlayer(require('../../assets/audio/correct.wav'));
-  const out = useAudioPlayer(require('../../assets/audio/out.wav'));
+  const [sources, setSources] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    void Asset.loadAsync([
+      require('../../assets/audio/pulse.wav'), require('../../assets/audio/tick.wav'),
+      require('../../assets/audio/start.wav'), require('../../assets/audio/correct.wav'),
+      require('../../assets/audio/out.wav'),
+    ]).then(assets => {
+      if (mounted) setSources(assets.map(asset => audioFileUri(asset.localUri ?? asset.uri, Platform.OS)));
+    }).catch(() => { if (mounted) setLoadError(true); });
+    return () => { mounted = false; };
+  }, []);
+  const pulse = useAudioPlayer(sources[0] ? {uri: sources[0]} : null);
+  const tick = useAudioPlayer(sources[1] ? {uri: sources[1]} : null);
+  const start = useAudioPlayer(sources[2] ? {uri: sources[2]} : null);
+  const correct = useAudioPlayer(sources[3] ? {uri: sources[3]} : null);
+  const out = useAudioPlayer(sources[4] ? {uri: sources[4]} : null);
   const tickStatus = useAudioPlayerStatus(tick);
   const startStatus = useAudioPlayerStatus(start);
   const correctStatus = useAudioPlayerStatus(correct);
@@ -18,7 +33,7 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
   const [foreground, setForeground] = useState(AppState.currentState !== 'background');
   const lastCue = useRef('');
   useEffect(() => {
-    void setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false }).then(() => setReady(true)).catch(() => setReady(true));
+    void setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: false, shouldRouteThroughEarpiece: false }).then(() => setReady(true)).catch(() => setReady(true));
     const listener = AppState.addEventListener('change', state => setForeground(state === 'active'));
     return () => listener.remove();
   }, []);
@@ -45,4 +60,5 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
     try { void player.seekTo(0).then(() => { if (!cancelled) { player.volume = .7; player.play(); } }).catch(() => {}); } catch { /* Unavailable player. */ }
     return () => { cancelled = true; };
   }, [audible, phase, index, seconds, outcome, tick, start, correct, out, tickStatus.isLoaded, startStatus.isLoaded, correctStatus.isLoaded, outStatus.isLoaded]);
+  return loadError ? 'unavailable' : sources.length && pulseStatus.isLoaded ? 'ready' : 'loading';
 }
