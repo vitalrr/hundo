@@ -53,13 +53,19 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
   }, [audible, phase, sources.length, pulse, tick, start, correct, out]);
   useEffect(() => {
     let cancelled = false;
-    if (audible && phase === 'lobby' && sources.length) {
-      countdown.volume = .7;
-      void countdown.seekTo(Math.max(0, 15 - secondsRef.current)).then(() => {
-        if (!cancelled) countdown.play();
-      }).catch(() => {});
-    } else countdown.pause();
-    return () => { cancelled = true; countdown.pause(); };
+    try {
+      if (audible && phase === 'lobby' && sources.length) {
+        countdown.volume = .7;
+        void countdown.seekTo(Math.max(0, 15 - secondsRef.current)).then(() => {
+          if (!cancelled) countdown.play();
+        }).catch(() => {});
+      } else countdown.pause();
+    } catch { /* A failed audio operation must not close the round. */ }
+    // useAudioPlayer releases the previous native player during render when
+    // the downloaded source replaces null. Effect cleanup runs afterwards:
+    // calling pause here would access that already released shared object.
+    // The hook owns disposal; the effect above handles mute and phase changes.
+    return () => { cancelled = true; };
   }, [audible, phase, sources.length, countdown]);
   useEffect(() => {
     const countdownTick = (phase === 'question' && seconds <= 9) && seconds > 0;
