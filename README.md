@@ -1,77 +1,52 @@
-# hundo — Android prototype
+# hundo.
 
-Live synchronized trivia game on Solana Mobile — timed rounds, elimination, on-chain prize pool split among finishers. Clock In hackathon 2026.
+A daily live game of collective instinct for Solana Seeker. Pick the answer you think the other active players will choose. Their votes determine the winning option when the timer closes.
 
-Ежедневная игра на чутьё: угадай выбор большинства оставшихся игроков.
+## Play
 
-## Состояние
+Connect a wallet with Mobile Wallet Adapter, join before the scheduled start and answer ten questions. Each question gives you ten seconds, followed by a five-second reveal. Players who pick a leading option advance. Tied leaders all advance, a missed answer eliminates, and spectators cannot vote. The server controls deadlines and settlement.
 
-- React Native / Expo Android-проект из официального `solana-mobile/solana-mobile-expo-template`, исходная ревизия `04cdd54bc3a9234b518412c51b0d6c5f1d32dc29`.
-- Шесть состояний интерфейса: подключение кошелька, комната, вопрос, результат, финал, архив для тренировки.
-- Автономный демораунд, явно помеченные синтетические голоса, без денежных призов.
-- MWA-подключение кошелька; при заданном API — серверная проверка подписанного одноразового сообщения.
-- Серверный SQL: синхронные вопросы, скрытые ответы, отсев, деление банка, права доступа.
-- Edge Function: вход, проверка on-chain memo-регистрации, ответы, состояние, архив.
-- Экран живого раунда, баланс публичного кошелька и ссылки Explorer. Сеть версии 0.1: **devnet**.
+The app includes an offline demo, a 15-second countdown with music, live percentage reveals, spectator mode and a winner screen. The daily schedule uses **19:00 UTC** and displays local time on each phone.
 
-**Не готово к публичному запуску:** проверка на Seeker, исполнитель выплат, производственная защита от ботов и нагрузочное тестирование. Таблица выплат содержит обязательства; запись в ней не означает выполненный перевод. Автоматического отправления денег в этой версии нет.
+## Verified prototype
 
-Локальная Android-сборка APK для ARM64 завершена 19 сентября 2026 года. Это тестовая Devnet-версия с тестовой подписью, а не сборка для публикации в магазине.
+The Android APK has been tested on a physical Seeker. In the September 20 shared rehearsal, a Seeker and a simulated Mac client submitted two votes on every question and both reached the final. The user subsequently verified timer, response feedback and full-screen fixes on Seeker. This is not evidence of production-scale capacity. See [rehearsal evidence](docs/rehearsal.md).
 
-## Запуск
+Wallet challenge authentication works. The code also contains ordinary-game memo transaction verification, public prize-wallet balance display, server-side prize accounting and Explorer links. **Actual prize transfers have not yet been verified, and this version has no automatic payout executor.** Current game accounting uses Devnet SOL. The 10 000 SKR home display and demo prize amounts are presentation examples, not funded reward claims. No Anchor escrow or completed SKR integration is present.
 
-Node.js 22+ (для тестов со встроенной поддержкой TypeScript — Node 24), pnpm, JDK 17 и Android SDK.
+The weekly schedule runs free, zero-prize rehearsals. Future live question packs must remain private. Publishing this repository and its history without first rotating unreleased packs would expose their content.
+
+## Run locally
+
+Use Node 24, pnpm, JDK 17 and Android SDK. The project began from the official `solana-mobile/solana-mobile-expo-template`, revision `04cdd54bc3a9234b518412c51b0d6c5f1d32dc29`.
 
 ```sh
 pnpm install
-pnpm test
 pnpm typecheck
+pnpm test
 pnpm android
 ```
 
-Mobile Wallet Adapter требует нативную сборку; Expo Go не подходит. На Seeker нужно включить режим разработчика и USB debugging, подключить USB и разрешить отладку.
+Mobile Wallet Adapter requires a native Android build. Expo Go and the web demo do not support wallet login. Set the public configuration from `.env.example` in a local `.env`. Never add service-role or signing keys to the client.
 
-Облачная сборка APK после настройки собственного Expo/EAS аккаунта:
-
-```sh
-pnpm exec eas build --platform android --profile preview
-```
-
-EAS CLI устанавливается отдельно. Профиль preview настроен на APK.
-
-Локальная сборка при настроенных `JAVA_HOME` (JDK 17) и `ANDROID_HOME` (Android SDK):
+For an embedded ARM64 preview APK with `JAVA_HOME` and `ANDROID_HOME` configured:
 
 ```sh
 pnpm build:local
 ```
 
-Результат: `dist/hundo-preview.apk`. Приложение содержит игровой код внутри APK и не требует запущенного сервера разработки на компьютере. Для кошелька и живых раундов требуется интернет.
+The preview uses test signing. Prepare a separate signing key and release identity for store publication. The installed APK does not need a running Mac, but wallet login and live rounds need internet.
 
-## Supabase
+## Backend and daily operations
 
-1. Создать проект. Применить `supabase/migrations/202609180001_hundo.sql`.
-2. Развернуть функцию `game` из `supabase/functions/game/index.ts`. В текущем проекте проверка ключа на шлюзе включена; приложение передаёт публичный ключ в `apikey` и `Authorization`. Функция дополнительно проверяет подпись кошелька и сессионный токен. Все таблицы и игровые SQL-функции доступны исключительно `service_role`.
-3. Секреты `SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY` Supabase предоставляет функции. `SOLANA_RPC_URL` должен указывать на devnet. Секретный ключ кошелька в функцию не передаётся.
-4. Скопировать `.env.example` в `.env`, задать `EXPO_PUBLIC_GAME_API_URL=https://PROJECT.supabase.co/functions/v1/game` и `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-5. Создать тестовый раунд: отдельный devnet-кошелёк, объявленный банк в lamports, время UTC и ровно 10 вопросов. Данные примера — `supabase/seed.example.sql`.
-6. Пересобрать приложение; проверить минимум на двух кошельках.
+Apply the SQL migrations in `supabase/migrations` in order, then deploy `supabase/functions/game/index.ts`. The function uses Supabase-provided service credentials, verifies wallet sessions and talks to Devnet through `SOLANA_RPC_URL`. The client supplies the public gateway key in `apikey` and `Authorization`. Tables and game RPCs remain restricted to the service role.
 
-## Правила версии 0.1
+[Daily operations](docs/daily-operations.md) covers a seven-day schedule, 70 English questions, duplicate protection and weekly content renewal. The operator creates complete future rounds in one transaction. No laptop cron process is required. Server requests advance settlement when needed.
 
-- Один кошелёк — одно участие. Это не гарантия одного человека.
-- Регистрация до старта, бесплатный вход, memo-транзакция требует сетевую комиссию тестовыми SOL.
-- 10 вопросов, 10 секунд ответа и 5 секунд результата на каждый.
-- Только активные игроки могут голосовать. Приём определяется временем базы после получения блокировки раунда.
-- При равенстве лидируют все варианты с максимальным числом голосов. Нет голосов — нет прошедших.
-- Пропуск ответа означает выбывание. Ответ после принятия неизменяемый.
-- `survivor_cap` по умолчанию NULL. При включении проходят самые быстрые по времени получения сервером. Одинаковое время на границе пропускает всех; лимит может быть превышен. Сетевая задержка влияет на скорость.
-- Банк делится целочисленно в lamports. Остаток остаётся в кошельке. При отсутствии финалистов весь банк остаётся в кошельке.
-- Призовой банк контролирует оператор; это не escrow и не гарантированная смарт-контрактом выплата.
+## Before a public release
 
-## Проверки и ограничения
+Complete transfer verification and an idempotent payout executor, test reconnection and larger rooms, address bot participation, add monitoring and establish production reward operations. One wallet is not proof of one human. Speed-cutoff decisions use server receipt time and therefore include network latency. The operator controls any prize wallet, not an escrow contract.
 
-`pnpm test` проверяет чистые правила и настоящие SQL-функции в PostgreSQL/WASM (PGlite), включая закрытие голосования и запрет анонимного доступа. Это не нагрузочный тест и не замена проверке hosted Supabase.
+## CLOCK IN
 
-Для первого публичного эфира ещё нужны: производственный RPC, глобальные ограничения запросов и защита от Sybil-аккаунтов, очистка истёкших сессий/nonce, устойчивый к повторным запускам исполнитель выплат с подтверждением в сети, тест потери связи и реального MWA на Seeker, проверка mainnet-настроек, мониторинг и правила игры. Текущий polling раз в секунду рассчитан на прототип, не на массовый эфир.
-
-Проект Supabase создан и функция развёрнута; детали и проверенные операции — `docs/project.md`. Для повторной проверки соединения: `node scripts/smoke.cjs` (использует одноразовый пустой кошелёк; не отправляет транзакции).
+[Submission draft](docs/submission.md) contains the English product description, official deliverable checklist, a 90-second video script and six-slide presentation content. The official announcement lists October 8, 2026 as the deadline. A final recording, presentation export, release checklist and submission are still pending.
