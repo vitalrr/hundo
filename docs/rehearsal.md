@@ -16,4 +16,16 @@ Apply migrations in order. `202609190001_home.sql` and the updated `game` functi
 5. Verify simultaneous questions, answer locking, reveal percentages, elimination and spectator mode. Reconnect one device after interrupting its network and check that the server restores its state.
 6. Verify the final result. Rehearsals have zero actual prize and send no payments. Registration uses the signed wallet session; ordinary games still require a verified on-chain memo transaction.
 
-No physical multi-device rehearsal has been completed yet. No test game has been scheduled automatically: its start time needs to match device availability. Keep a record of the round ID, devices, results and any observed delays when performing that check.
+## Recorded rehearsal — September 19, 2026
+
+Round `cc6ea07c-636a-4275-a94f-c43ce61bb955` started at 20:42:57 UTC. A Seeker and one explicitly simulated client on the Mac registered. The Mac client answered option A through all ten questions; the server returned ten reveal states and a final with one survivor out of two. Each reveal had counts `[1,0,0,0]`. The Seeker user confirmed missing the beginning, so this run verified registration, server progression and timeout elimination, but **not successful answer submission from the phone**. It was not a two-Android-device test. No payouts were sent.
+
+The simulated client is `node scripts/rehearsal-player.cjs <round-id>`. It only joins an explicitly selected rehearsal with a zero actual prize; its private key is ephemeral and is never printed or saved.
+
+## Preview 0.2
+
+Live rounds now open a full-screen modal during the final 15 seconds of the lobby and remain full-screen for questions and results. The live controller stays mounted when the user explores the demo. Demo and live rounds share `GameStage`: pale-purple play, gray-lilac spectator mode, large timer digits, and purple/red answer feedback. The countdown includes an original coin animation and synthesized audio cues with a mute control. Audio pauses in the background; this is an in-app transition, not a lockscreen alarm or takeover of other apps.
+
+The home retains its original lime gradient and the requested display prize, with EVERY DAY below it. The gradient is outside the safe-area container so it covers the bottom inset; Android navigation colors follow each screen. Timer digits use separate text layout with padding to avoid Android font clipping. The app icon is purple h. on lime; adaptive Android foreground art has its own safe margin.
+
+Type checking, 13 automated tests and the native release build passed. Browser checks covered countdown, question layout, incorrect-answer feedback and spectator styling. Native audio volume, navigation inset rendering and automatic live takeover still need confirmation on the Seeker with APK 0.2; browser checks do not establish those native behaviors.

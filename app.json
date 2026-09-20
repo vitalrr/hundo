@@ -2,14 +2,15 @@
   "expo": {
     "name": "hundo",
     "slug": "hundo",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "icon": "./assets/hundo-icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
+    "androidNavigationBar": { "backgroundColor": "#DFEBC2", "barStyle": "dark-content" },
     "splash": {
       "image": "./assets/hundo-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#11120F"
+      "backgroundColor": "#E8FF79"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -19,9 +20,11 @@
       "bundleIdentifier": "app.hundo.mobile"
     },
     "android": {
+      "versionCode": 2,
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/hundo-icon.png",
-        "backgroundColor": "#11120F"
+        "foregroundImage": "./assets/hundo-adaptive.png",
+        "backgroundColor": "#E8FF79"
       },
       "package": "app.hundo.mobile"
     },

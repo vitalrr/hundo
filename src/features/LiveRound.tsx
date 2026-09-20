@@ -1,9 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Connection, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
 import { Buffer } from 'buffer';
 import { request } from '../services/api';
 import { useMobileWallet } from '../utils/useMobileWallet';
+
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { GameStage } from './GameStage';
+import { SystemChrome } from './SystemChrome';
+import { resultOutcome, shouldTakeOver } from '../game/presentation';
 
 type Snapshot = {
  roundId:string;serverTime:string;startsAt:string;phase:'lobby'|'question'|'result'|'final';index:number;
@@ -15,17 +21,24 @@ type Snapshot = {
 const connection = new Connection('https://api.devnet.solana.com','confirmed');
 const explorer = (kind:string,id:string) => `https://explorer.solana.com/${kind}/${id}?cluster=devnet`;
 const sol = (value:string|number) => (Number(value)/1e9).toLocaleString('en-US',{maximumFractionDigits:9});
-export function LiveRound({address}:{address:string}) {
+export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{address:string;open:boolean;onClose:()=>void;onTakeOver:()=>void;onVisibilityChange:(visible:boolean)=>void}) {
+ const [dismissed,setDismissed]=useState<string|null>(null);
+ const [foreground,setForeground]=useState(AppState.currentState!=='background');
+ useEffect(()=>{const listener=AppState.addEventListener('change',value=>setForeground(value==='active'));return()=>listener.remove();},[]);
  const wallet=useMobileWallet();const [roundId,setRoundId]=useState<string|null>(null);const [state,setState]=useState<Snapshot|null>(null);
+ const snapshotRef=useRef(state);snapshotRef.current=state;
  const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [balance,setBalance]=useState<number|null>(null);
- const [tick,setTick]=useState(0);const synced=useRef({at:0,time:0});const pendingEntry=useRef<{round:string;signature:string}|null>(null);
+ const [,setTick]=useState(0);const synced=useRef({at:0,time:0});const pendingEntry=useRef<{round:string;signature:string}|null>(null);
  useEffect(()=>{const timer=setInterval(()=>setTick(n=>n+1),200);return()=>clearInterval(timer);},[]);
  useEffect(()=>{
   let stopped=false;let timer:ReturnType<typeof setTimeout>;
   async function poll(){
    try{
     let id=roundId;
-    if(!id){const latest=await request<{roundId:string|null}>('latest');id=latest.roundId;if(!stopped)setRoundId(id);}
+    if(!id||snapshotRef.current?.phase==='final'){
+     const latest=await request<{roundId:string|null}>('latest');
+     if(latest.roundId&&latest.roundId!==id){id=latest.roundId;if(!stopped){setRoundId(id);setDismissed(null);}}
+    }
     if(id){const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){synced.current={at:performance.now(),time:Date.parse(next.serverTime)};setState(next);}}
     if(!stopped)setError('');
    }catch(e){if(!stopped)setError(e instanceof Error?e.message:'Connection unavailable');}
@@ -59,30 +72,55 @@ export function LiveRound({address}:{address:string}) {
  const stale=performance.now()-synced.current.at>3000;
  const serverNow=synced.current.time+performance.now()-synced.current.at;
  const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*15000+(state.phase==='question'?10000:15000)):0;
- const remaining=Math.max(0,Math.ceil((deadline-serverNow)/1000));
- return <View style={s.panel}>
-  <Text style={s.tag}>{state?.isRehearsal?'LIVE REHEARSAL':'LIVE · DEVNET · TEST SOL'}</Text>
-  {error?<Text accessibilityLiveRegion="polite" style={s.error}>{error}</Text>:null}
-  {!state?<><Text style={s.title}>No game scheduled yet</Text><Text style={s.body}>The next game will appear here.</Text></>:<>
-   <Text style={s.body}>{state.playerCount} players · {state.survivorCount} still playing</Text>
-   {!state.isRehearsal&&<><Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':`${sol(balance)} SOL`}</Text>
-   <Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable></>}
-   {state.survivorCap!==null&&<Text style={s.body}>Player cap after each question: {state.survivorCap}. Players tied at the cutoff all advance.</Text>}
-   {state.phase==='lobby'&&<>
-    <Text style={s.title}>{Math.floor(remaining/60)}:{(remaining%60).toString().padStart(2,'0')}</Text>
-    <Text style={s.body}>{state.isRehearsal ? (state.joined ? 'You’re in. Waiting for the game.' : 'Join with your connected wallet. No transaction or network fee.') : state.joined?'Entry confirmed on-chain. Waiting for the game.':'Sign to record your entry on-chain. Entry is free; a small network fee is paid in test SOL.'}</Text>
-    {!state.joined&&<Pressable style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':state.isRehearsal?'Join rehearsal':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
+ const remainingMs=Math.max(0,deadline-serverNow);
+ const remaining=Math.ceil(remainingMs/1000);
+ const visible=open||!!(state&&dismissed!==state.roundId&&shouldTakeOver(state.phase,remaining));
+ useEffect(()=>{onVisibilityChange(visible);return()=>onVisibilityChange(false);},[visible,onVisibilityChange]);
+ function close(){
+  if(state&&state.phase!=='final'&&shouldTakeOver(state.phase,remaining)){
+   if(Platform.OS==='web'){if(window.confirm('Leave the live game? Missing an answer means elimination.')){setDismissed(state.roundId);onClose();}return;}
+   Alert.alert('Leave the live game?','The game keeps going. Missing an answer means elimination.',[{text:'Stay',style:'cancel'},{text:'Leave',onPress:()=>{setDismissed(state.roundId);onClose();}}]);
+  }else{if(state?.phase==='final')setDismissed(state.roundId);onClose();}
+ }
+ const stage=state&&(state.phase==='question'||state.phase==='result'||state.phase==='lobby'&&remaining<=15);
+ const watching=state&&(!state.joined||state.eliminatedAt!==null)&&!(state.phase==='result'&&state.eliminatedAt===state.index);
+ const background=watching?'#E7E7EF':'#EFE7FF';
+
+ return <Modal visible={visible} animationType="fade" presentationStyle="fullScreen" onShow={onTakeOver} onRequestClose={close}>
+  <SafeAreaView style={{flex:1,backgroundColor:background}}><SystemChrome active={visible} color={background}/><StatusBar style="dark"/>
+  {visible&&foreground&&stage&&state ? <GameStage phase={state.phase} index={state.index} seconds={remaining} remainingMs={remainingMs}
+   question={state.question} choice={state.myChoice} counts={state.counts} leaders={state.leaders}
+   alive={state.eliminatedAt===null} joined={state.joined} outcome={resultOutcome(state.joined,state.eliminatedAt,state.index)}
+   disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||state.myChoice!==null}
+   pending={busy} error={error} stale={stale} playerCount={state.playerCount} survivorCount={state.survivorCount} onAnswer={choice=>void answer(choice)} onExit={close}
+  /> : <ScrollView contentContainerStyle={s.page}>
+   <Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text>
+   <Text style={s.tag}>{state?.isRehearsal?'LIVE REHEARSAL':'LIVE GAME · DEVNET'}</Text>
+   {error?<Text style={s.error}>{error}</Text>:null}
+   {!state?<><Text style={s.title}>No game scheduled yet</Text><Text style={s.body}>The next game will appear here.</Text></>:<>
+    <Text style={s.body}>{state.playerCount} joined · {state.survivorCount} still playing</Text>
+    {state.phase==='lobby'&&<>
+     <Text style={s.clock}>{Math.floor(remaining/60)}:{(remaining%60).toString().padStart(2,'0')}</Text>
+     <Text style={s.title}>{state.joined?'You’re in!':'Ready to play?'}</Text>
+     <Text style={s.body}>{state.joined?'Keep hundo open. The full-screen countdown starts 15 seconds before the game.':state.isRehearsal?'Join with your connected wallet. No transaction or network fee.':'Sign to record your entry on-chain. Your wallet pays a small network fee in test SOL.'}</Text>
+     {!state.joined&&<Pressable accessibilityRole="button" style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':state.isRehearsal?'Join rehearsal':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
+    </>}
+    {state.survivorCap!==null&&<Text style={s.body}>Player cap: {state.survivorCap}. Ties at the speed cutoff all advance.</Text>}
+    {!state.isRehearsal&&<><Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':sol(balance)+' SOL'}</Text><Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable></>}
+    {state.phase==='final'&&<>
+     <Text style={s.clock}>FINISH</Text>
+     <Text style={s.title}>{state.joined&&state.eliminatedAt===null?'You made it!':'Thanks for playing.'}</Text>
+     <Text style={s.body}>{state.survivorCount} finalists out of {state.playerCount} players.</Text>
+     {state.isRehearsal?<Text style={s.body}>Rehearsal complete — no payouts are sent.</Text>:state.payouts?.map(p=><View key={p.wallet} style={s.card}><Text style={s.body}>{p.wallet===address?'You':p.wallet.slice(0,4)+'…'+p.wallet.slice(-4)} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}
+    </>}
    </>}
-   {(state.phase==='question'||state.phase==='result')&&<>
-    <Text style={s.tag}>QUESTION {state.index+1}/10 · {remaining} sec</Text>
-    <Text style={s.body}>{state.joined&&state.eliminatedAt===null?'You are playing':'You are watching'}</Text>
-    <Text style={s.title}>{state.question?.text}</Text>
-    {state.question?.options.map((option,i)=><Pressable key={i} disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||state.myChoice!==null} onPress={()=>void answer(i)} style={[s.option,(state.myChoice===i||state.leaders?.includes(i))&&{borderColor:'#D4FF62'}]}><Text style={s.body}>{option}{state.myChoice===i?' ✓':''}</Text>{state.counts&&<Text style={s.link}>{Math.round(state.counts[i]/Math.max(1,state.counts.reduce((a,b)=>a+b,0))*100)}%</Text>}</Pressable>)}
-    {state.phase==='result'&&<Text style={s.link}>{state.eliminatedAt===null&&state.joined?'You advance ↗':'Stay and watch the game'}</Text>}
-    {stale&&<Text style={s.error}>Reconnecting to the game. Answers are temporarily paused.</Text>}
-   </>}
-   {state.phase==='final'&&<><Text style={s.title}>Game over</Text>{state.isRehearsal ? <Text style={s.body}>{state.survivorCount} finalists. Rehearsal complete — no payouts are sent.</Text> : <><Text style={s.body}>{state.survivorCount} finalists split the prize pool. Any rounding remainder stays in the public wallet.</Text>{!state.payouts?.length&&<Text style={s.body}>No finalists this time. The prize pool stays in the wallet.</Text>}{state.payouts?.map(p=><View key={p.wallet} style={s.option}><Text style={s.body}>{p.wallet===address?'You':`${p.wallet.slice(0,4)}…${p.wallet.slice(-4)}`} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}</>}</>}
-  </>}
- </View>;
+   <Pressable accessibilityRole="button" style={s.back} onPress={close}><Text style={s.link}>Back to home</Text></Pressable>
+  </ScrollView>}
+  </SafeAreaView>
+ </Modal>;
 }
-const s=StyleSheet.create({panel:{backgroundColor:'#1D1F19',padding:20,borderRadius:20,gap:14},tag:{color:'#D4FF62',fontSize:11,letterSpacing:1},title:{color:'#F4F5E9',fontSize:26,fontWeight:'700'},body:{color:'#A5AB96',fontSize:14,lineHeight:21},error:{color:'#FFAD95',fontSize:14},link:{color:'#D4FF62',fontSize:14},button:{backgroundColor:'#D4FF62',padding:18,borderRadius:14},buttonText:{fontWeight:'700',color:'#11120F',textAlign:'center'},option:{borderWidth:1,borderColor:'#33362A',borderRadius:14,padding:16,gap:8}});
+const s=StyleSheet.create({
+ page:{padding:24,gap:20,flexGrow:1,maxWidth:600,width:'100%',alignSelf:'center'},wordmark:{fontSize:38,fontWeight:'900',letterSpacing:-2,color:'#202020'},
+ tag:{color:'#7047EB',fontSize:11,fontWeight:'800',letterSpacing:1},title:{color:'#202020',fontSize:30,fontWeight:'800'},clock:{color:'#7047EB',fontSize:64,fontWeight:'900',fontVariant:['tabular-nums']},
+ body:{color:'#5B5270',fontSize:15,lineHeight:23},error:{color:'#D72C42',fontSize:14},link:{color:'#7047EB',fontSize:15,fontWeight:'700'},button:{backgroundColor:'#7047EB',padding:20,borderRadius:16},buttonText:{fontWeight:'800',color:'#FFFFFF',textAlign:'center',fontSize:16},card:{backgroundColor:'#FFFFFF88',padding:20,borderRadius:16,gap:8},back:{marginTop:'auto',padding:20,alignItems:'center'},
+});
