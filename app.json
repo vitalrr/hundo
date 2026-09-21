@@ -20,6 +20,7 @@
       "bundleIdentifier": "app.hundo.mobile"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "versionCode": 2,
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
@@ -31,6 +32,7 @@
     "web": {
       "favicon": "./assets/hundo-icon.png"
     },
-    "scheme": "hundo"
+    "scheme": "hundo",
+    "plugins": [["expo-notifications", {"color":"#7047EB", "defaultChannel":"hundo-games"}]]
   }
 }
