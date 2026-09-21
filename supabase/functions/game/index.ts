@@ -59,6 +59,23 @@ Deno.serve(async req => {
     const { data: session, error: sessionError } = await db.from('hundo_sessions').select('wallet').eq('token_hash', await hash(token)).gt('expires_at', new Date().toISOString()).maybeSingle(); check(sessionError);
     if (!session) return json({ error: 'Сессия истекла. Подключи кошелёк заново' }, 401);
     const wallet = session.wallet;
+    if (body.action === 'push-register') {
+      const installation = uuid(body.installationId);
+      if (typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096 || /\s/.test(body.token)) return json({ error: 'Invalid notification token' }, 400);
+      const { error } = await db.rpc('hundo_register_push', { p_wallet: wallet, p_installation: installation, p_token: body.token });
+      if (error) return json({ error: 'Could not enable reminders. Reconnect the original wallet or check your device limit.' }, 409);
+      return json({ enabled: true });
+    }
+    if (body.action === 'push-disable') {
+      const installation = uuid(body.installationId);
+      const { error } = await db.from('hundo_push_devices').update({ enabled: false, updated_at: new Date().toISOString() }).eq('installation_id', installation).eq('wallet', wallet); check(error);
+      return json({ enabled: false });
+    }
+    if (body.action === 'push-status') {
+      const installation = uuid(body.installationId);
+      const { data, error } = await db.from('hundo_push_devices').select('enabled').eq('installation_id', installation).eq('wallet', wallet).maybeSingle(); check(error);
+      return json({ enabled: data?.enabled ?? false });
+    }
     if (body.action === 'latest') {
       const { data, error } = await db.rpc('hundo_home'); check(error);
       return json({ roundId: data?.round?.id ?? null });

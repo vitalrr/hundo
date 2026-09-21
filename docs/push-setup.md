@@ -4,7 +4,9 @@ Firebase project: `hundo-4f2fa`. Android package: `app.hundo.mobile`.
 Local `google-services.json` is configured in app.json and excluded from Git.
 To reproduce a native build, download this file from the Firebase Android app settings first.
 
-`expo-notifications` is installed. `src/services/gameNotifications.ts` contains opt-in registration and notification-open helpers; these are not yet connected to the UI. No server notification credentials have been created or stored, and no reminders are being sent.
+`expo-notifications` is installed. `src/services/gameNotifications.ts` contains opt-in registration and notification-open helpers; these are not yet connected to the UI. Firebase native prebuild and Android release build passed. No server notification credentials have been created or stored, and no reminders are being sent.
+
+The private device table and wallet-authenticated `push-register`, `push-status`, and `push-disable` actions are implemented locally, not deployed. Registration supports token rotation, caps enabled devices at five per wallet, and prevents another wallet from taking over an existing installation or token. Database tests cover these constraints and deny anonymous reads and registration. Apply `202609210002_push.sql` before deploying the updated game function.
 
 Next steps:
 
