@@ -3,6 +3,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { answerTone, type StagePhase } from '../game/presentation';
 import { useRoundAudio } from '../game/useRoundAudio';
 import { CountdownCoins } from './CountdownCoins';
+import { personalCrowdResult } from '../game/crowd';
 
 type Props = {
  phase: StagePhase; index: number; seconds: number; remainingMs: number;
@@ -30,16 +31,16 @@ export function GameStage(p: Props) {
  const footer = <View style={s.footer}><Text style={s.note}>{p.demo ? 'DEMO · Simulated votes' : `${p.playerCount ?? 0} joined · ${p.survivorCount ?? 0} still playing`}</Text>{p.demo&&p.onPreviewWinner?<Pressable accessibilityRole="button" onPress={p.onPreviewWinner}><Text style={s.exit}>Preview winning screen ↗</Text></Pressable>:null}<Pressable accessibilityRole="button" onPress={p.onExit}><Text style={s.exit}>Leave game</Text></Pressable></View>;
  const controls = <View style={s.header}><Text style={s.logo}>hundo<Text style={{color:purple}}>.</Text></Text><Pressable accessibilityRole="button" accessibilityLabel={sound?'Mute game audio':'Enable game audio'} onPress={()=>setSound(v=>!v)} style={s.sound}><Text style={s.soundText}>{!sound?'SOUND OFF':audioState==='unavailable'?'SOUND UNAVAILABLE':'SOUND ON'}</Text></Pressable></View>;
  if (p.phase === 'lobby') return <ScrollView contentContainerStyle={s.page}>
-  {controls}<View style={s.countdownCenter}><Text style={s.kicker}>GET READY</Text><Animated.View style={[s.countdownBox,{transform:[{scale}]}]}><Text allowFontScaling={false} style={s.countdown}>{p.seconds > 0 ? p.seconds : 'GO'}</Text></Animated.View><CountdownCoins seconds={p.seconds}/><Text style={s.countdownTitle}>{p.joined?'You’re in. Trust your instinct.':'Watch the game live.'}</Text><Text style={s.note}>{p.stale?'Reconnecting to the game…':p.seconds===0?'Waiting for the first question…':'The game is about to begin'}</Text></View>{footer}
+  {controls}<View style={s.countdownCenter}><Text style={s.kicker}>READ THE ROOM</Text><Animated.View style={[s.countdownBox,{transform:[{scale}]}]}><Text allowFontScaling={false} style={s.countdown}>{p.seconds > 0 ? p.seconds : 'GO'}</Text></Animated.View><CountdownCoins seconds={p.seconds}/><Text style={s.countdownTitle}>{p.joined?'Forget what you think.':'Watch the crowd.'}</Text><Text style={s.note}>{p.stale?'Reconnecting to the game…':p.seconds===0?'Waiting for the first question…':'Think what they think.'}</Text></View>{footer}
  </ScrollView>;
  return <ScrollView contentContainerStyle={s.page}>
   {controls}
   {p.outcome==='spectator'&&<View style={s.spectatorBanner}><Text style={s.spectatorTitle}>YOU’RE WATCHING</Text><Text style={s.spectatorNote}>Your run is over. See who makes the final.</Text></View>}
   <View style={s.row}><Text style={s.kicker}>QUESTION {String(p.index+1).padStart(2,'0')} / 10</Text><Text style={s.badge}>{p.alive&&p.joined?'● PLAYING':'◉ WATCHING'}</Text></View>
   <View style={s.progress}>{Array.from({length:10},(_,i)=><View key={i} style={[s.segment,i<=p.index&&{backgroundColor:purple}]}/>)}</View>
-  <View style={[s.row,s.timerRow]}><View style={s.digits}><Text allowFontScaling={false} style={[s.timer,urgent&&{color:red}]}>{String(p.seconds).padStart(2,'0')}</Text><Text style={s.seconds}>sec</Text></View><Text style={s.prompt}>{revealed?'NEXT QUESTION\nIN':'TRUST YOUR\nFIRST INSTINCT'}</Text></View>
+  <View style={[s.row,s.timerRow]}><View style={s.digits}><Text allowFontScaling={false} style={[s.timer,urgent&&{color:red}]}>{String(p.seconds).padStart(2,'0')}</Text><Text style={s.seconds}>sec</Text></View><Text style={s.prompt}>{revealed?'NEXT QUESTION\nIN':'NOT YOUR ANSWER.\nTHEIRS.'}</Text></View>
   <View style={s.timeTrack}><View style={[s.timeFill,{width:`${Math.max(0,Math.min(100,p.remainingMs/(revealed?5000:10000)*100))}%`,backgroundColor:urgent?red:purple}]}/></View>
-  <Text style={s.question}>{p.question?.text ?? 'Loading question…'}</Text>
+  <Text style={s.question}>{p.question?.text ?? 'Loading question…'}</Text><Text style={[s.note,{textAlign:'left',marginBottom:4}]}>What will most players say?</Text>
   {p.question?.options.map((option,i)=>{
    const tone=answerTone(p.choice,i,revealed,p.leaders??[]);
    const colored=tone==='majority'||tone==='wrong';
@@ -48,7 +49,7 @@ export function GameStage(p: Props) {
     {revealed?<View style={s.answerEnd}><Text style={[s.percent,colored&&s.white]}>{Math.round((p.counts?.[i]??0)/total*100)}%</Text><Text style={[s.mark,colored&&s.white]}>{tone==='majority'?'✓ MOST PICKED':tone==='wrong'?'✕ YOUR PICK':p.choice===i?'YOUR PICK':''}</Text></View>:p.choice===i?<Text style={{color:purple,fontWeight:'900'}}>✓</Text>:null}
    </Pressable>;
   })}
-  {revealed?<View accessibilityLiveRegion="polite" style={[s.result,{backgroundColor:p.outcome==='out'?red:p.outcome==='correct'?purple:'#FFFFFF99'}]}><Text style={[s.resultTitle,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'YOU’RE THROUGH! ↗':p.outcome==='out'?'YOU’RE OUT':'WATCH THE MAJORITY'}</Text><Text style={[s.resultNote,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'You picked the majority.':p.outcome==='out'?(p.choice===null?'No answer in time. Stay and watch.':(p.leaders??[]).includes(p.choice)?'Right pick, but outside the speed cutoff.':'Your answer wasn’t the majority. Stay and watch.'):'See what the remaining players picked.'}</Text></View>:<Text style={s.locked}>{p.stale?'Reconnecting — answers paused':p.pending?'Sending your answer…':!p.alive||!p.joined?'You’re watching this game':p.choice!==null?'✓ Answer locked':'Pick before the timer runs out'}</Text>}
+  {revealed?<View accessibilityLiveRegion="polite" style={[s.result,{backgroundColor:p.outcome==='out'?red:p.outcome==='correct'?purple:'#FFFFFF99'}]}><Text style={[s.resultTitle,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'YOU’RE THROUGH! ↗':p.outcome==='out'?'The crowd surprised you.':'WATCH THE MAJORITY'}</Text><Text style={[s.resultNote,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'You picked the majority.':p.outcome==='out'?(p.choice===null?'No answer in time. Stay and watch.':(p.leaders??[]).includes(p.choice)?'Right pick, but outside the speed cutoff.':(p.question&&p.counts?personalCrowdResult({...p.question,number:p.index,counts:p.counts,myChoice:p.choice}):'Stay and read the crowd.')):'See what the remaining players picked.'}</Text></View>:<Text style={s.locked}>{p.stale?'Reconnecting — answers paused':p.pending?'Sending your answer…':!p.alive||!p.joined?'You’re watching this game':p.choice!==null?'✓ Answer locked':''}</Text>}
   {!!p.error&&<Text accessibilityLiveRegion="polite" style={s.error}>{p.error}</Text>}
   {footer}
  </ScrollView>;

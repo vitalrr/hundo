@@ -12,6 +12,8 @@ import { Archive } from './Archive';
 import { useHome } from '../services/useHome';
 import { GameStage } from './GameStage';
 import { WinnerResult } from './WinnerResult';
+import { CrowdRecap } from './CrowdRecap';
+import { personalCrowdResult } from '../game/crowd';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome } from '../game/presentation';
 
@@ -92,6 +94,7 @@ export function HundoApp() {
     if (screen === 'play' || screen === 'countdown') Alert.alert('Leave the demo?', 'You can start again anytime.', [{ text: 'Stay', style: 'cancel' }, { text: 'Leave', onPress: () => setScreen('lobby') }]);
     else setScreen('lobby');
   }
+  const recap=demoQuestions.map((q,number)=>{const votes=[...demoCounts[number]];if(answers[number]!==undefined)votes[answers[number]]++;return {...q,number,counts:votes,myChoice:answers[number]??null};});
   const won = alive && screen === 'final';
   const demoStage = screen === 'play' || screen === 'countdown';
   const spectator = !alive && !(phase.phase === 'result' && eliminatedAt === phase.index);
@@ -103,25 +106,26 @@ export function HundoApp() {
         <Text style={s.homeTime}>{nextRound?.phase === 'live' ? 'LIVE' : startDate ? startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : home.data ? 'SOON' : '—'}</Text>
         <Text style={s.scheduleNote}>{startDate ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · your local time` : home.error || (home.data ? 'The next game will be announced here' : 'Loading the next game…')}</Text>
         <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>10 000 <Text style={s.homeUnit}>SKR</Text></Text>
-        <Text style={s.daily}>EVERY DAY</Text>
+        <Text style={s.daily}>SPLIT BY THOSE WHO READ THE CROWD</Text>
       </View>
       <View style={s.rulesPanel}>
-        <Text style={s.rulesText}>Pick the answer most players will choose.</Text>
+        <Text style={s.rulesText}>Don't guess the answer. Guess the crowd.</Text>
         <View style={s.rulesDivider} />
         <View style={s.metricsRow}><Text style={s.rulesMetric}>10 questions</Text><Text style={s.metricsDot}>·</Text><Text style={s.rulesMetric}>10 seconds</Text></View>
       </View>
-      <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'player has' : 'players have'} joined` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
+      <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? nextRound.playerCount === 0 ? 'Be the first in the room' : `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'person' : 'people'} in the room` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
       {address ? <Text style={s.body}>● Wallet {address.slice(0, 5)}…{address.slice(-5)} connected · Devnet</Text> : <Button title={busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy} />}
-      {API_URL && address ? <Button title="Enter live game ↗" onPress={()=>setLiveOpen(true)}/> : null}
-      <Button title="See how it works ↗" onPress={startDemo} secondary />
-      <Text style={s.footnote}>A quick walkthrough of the game.</Text>
+      {API_URL && address ? <Button title="Join the room ↗" onPress={()=>setLiveOpen(true)}/> : null}
+      <Button title="See how it works ↗" onPress={()=>address&&API_URL?setScreen('practice'):startDemo()} secondary />
+      <Text style={s.footnote}>{address&&API_URL?'Practice on a past crowd':'Practice with a demo crowd'}</Text>
     </>}
     {won && <WinnerResult demo onHome={()=>setScreen('lobby')}/>}
     {screen === 'final' && !won && <>
-      <Text style={s.eyebrow}>DEMO COMPLETE</Text><Text style={s.hero}>{won ? 'On the same\nwavelength.' : 'Try your\ninstincts again.'}<Text style={{ color: C.lime }}>↗</Text></Text>
-      <View style={s.card}><Text style={s.eyebrow}>{won ? 'YOU MADE THE FINAL' : 'YOUR RESULT'}</Text><Text style={s.large}>{won ? '10 / 10' : `${eliminatedAt ?? 0} / 10`}</Text><Text style={s.body}>{won ? 'In a live game, finalists split the prize pool equally.' : `Eliminated on question ${(eliminatedAt ?? 0) + 1}. Another game, another chance to read the room.`}</Text><View style={s.rule} /><Text style={s.body}>This is a demo. There are no cash prizes or payouts.</Text></View>
+      <Text style={s.eyebrow}>DEMO COMPLETE</Text><Text style={s.hero}>{won ? 'On the same\nwavelength.' : 'The crowd\nsurprised you.'}<Text style={{ color: C.lime }}>↗</Text></Text>
+      <View style={s.card}><Text style={s.eyebrow}>{won ? 'YOU MADE THE FINAL' : 'YOUR RESULT'}</Text><Text style={s.large}>{won ? '10 / 10' : `${eliminatedAt ?? 0} / 10`}</Text><Text style={s.body}>{won ? 'In a live game, finalists split the prize pool equally.' : personalCrowdResult(recap[eliminatedAt??0])}</Text><View style={s.rule} /><Text style={s.body}>This is a demo. There are no cash prizes or payouts.</Text></View>
       <View style={s.spacer} /><Button title="Try again ↗" onPress={startDemo} /><Button title="Back to lobby" onPress={() => setScreen('lobby')} secondary />
     </>}
+    {screen === 'final' && <CrowdRecap questions={recap} demo/>}
     {screen === 'practice' && <>
       <Text style={s.eyebrow}>BETWEEN GAMES</Text><Text style={s.title}>Read the{'\n'}room.</Text>{API_URL && address ? <Archive /> : <View style={s.card}><Text style={s.stat}>The first game is coming</Text><Text style={s.body}>Connect your wallet to replay past questions with recorded voting results once the first game ends.</Text></View>}<Text style={s.body}>Learn the rules in a demo. Its votes are simulated, not recorded from past games.</Text><View style={s.spacer} /><Button title="Play the demo ↗" onPress={startDemo} /><Button title="Back" onPress={() => setScreen('lobby')} secondary />
     </>}
@@ -129,7 +133,7 @@ export function HundoApp() {
   </ScrollView>}</SafeAreaView>{API_URL&&address?<LiveRound address={address} open={liveOpen} onClose={()=>setLiveOpen(false)} onTakeOver={()=>setScreen('lobby')} onVisibilityChange={setLiveVisible}/>:null}</View>;
 }
 const s = StyleSheet.create({
-  daily: {color:C.purple,fontSize:12,fontWeight:'800',letterSpacing:2,marginTop:-4}, metricsRow:{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:16,flexWrap:'wrap'}, metricsDot:{color:C.purple,fontSize:25,fontWeight:'900'},
+  daily: {color:C.purple,fontSize:10,fontWeight:'800',letterSpacing:1,textAlign:'center',lineHeight:15,marginTop:-4}, metricsRow:{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:16,flexWrap:'wrap'}, metricsDot:{color:C.purple,fontSize:25,fontWeight:'900'},
   homeHero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 20 }, homeTime: { color: C.text, fontSize: 58, fontWeight: '900', letterSpacing: -2, textAlign: 'center' }, scheduleNote: { color: C.muted, fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 240 }, homePrize: { color: C.purple, fontSize: 76, fontWeight: '900', letterSpacing: -4, textAlign: 'center', width: '100%', marginTop: 18 }, homeUnit: { fontSize: 32, letterSpacing: -1 }, rulesPanel: { backgroundColor: '#FFFFFF55', borderRadius: 24, padding: 22, gap: 18, marginBottom: 6 }, rulesText: { color: C.text, fontSize: 17, lineHeight: 24, textAlign: 'center', fontWeight: '500' }, rulesDivider: { height: 1, backgroundColor: '#20202014' }, rulesMetric: { color: C.muted, fontSize: 13, fontWeight: '600' }, waiting: { color: C.purple, fontSize: 15, fontWeight: '800', textAlign: 'center', marginVertical: 2 },
   prizeCard: { backgroundColor: C.purple, padding: 24, borderRadius: 20, gap: 12, marginVertical: 6 }, prizeLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }, prizeAmount: { color: '#E8FF79', fontSize: 62, fontWeight: '900', letterSpacing: -2 }, prizeUnit: { fontSize: 28, letterSpacing: 0 }, prizeNote: { color: '#FFFFFF', fontSize: 12, lineHeight: 18 },
   safe: { flex: 1, backgroundColor: C.bg }, page: { flexGrow: 1, padding: 24, paddingTop: 12, gap: 14, maxWidth: 600, width: '100%', alignSelf: 'center' },

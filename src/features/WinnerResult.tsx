@@ -15,7 +15,7 @@ export function WinnerResult({demo, rehearsal, finalists, players, payout, onHom
   return <View style={s.root}>
     <View style={s.row}><Text style={s.label}>{demo?'DEMO · WINNER PREVIEW':rehearsal?'REHEARSAL COMPLETE':'ROUND COMPLETE'}</Text><Pressable accessibilityRole="button" onPress={()=>setSound(v=>!v)}><Text style={s.link}>{sound?'SOUND ON':'SOUND OFF'}</Text></Pressable></View>
     <Text accessibilityRole="header" style={s.title}>YOU{ '\n' }WON!</Text>
-    <Text style={s.subtitle}>You read the room. All the way.</Text>
+    <Text style={s.subtitle}>You knew what the crowd was thinking. 10 times in a row.</Text>
     <CountdownCoins seconds={0}/>
     <View style={s.score}><Text style={s.scoreText}>10 / 10</Text><Text style={s.label}>QUESTIONS SURVIVED</Text></View>
     <View style={s.card}>

@@ -9,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { GameStage } from './GameStage';
 import { WinnerResult } from './WinnerResult';
+import { CrowdRecap } from './CrowdRecap';
+import { personalCrowdResult, type CrowdQuestion } from '../game/crowd';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome, shouldTakeOver } from '../game/presentation';
 
@@ -17,6 +19,7 @@ type Snapshot = {
  potWallet:string;potLamports:string;network:'devnet';survivorCap:number|null;playerCount:number;survivorCount:number;
  joined:boolean;eliminatedAt:number|null;myChoice:number|null;isRehearsal:boolean;
  question?:{text:string;options:string[]};counts?:number[];leaders?:number[];
+ recap?:CrowdQuestion[];
  payouts?:{wallet:string;lamports:string;signature:string|null;status:string}[];
 };
 const connection = new Connection('https://api.devnet.solana.com','confirmed');
@@ -107,7 +110,7 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    alive={state.eliminatedAt===null} joined={state.joined} outcome={resultOutcome(state.joined,state.eliminatedAt,state.index)}
    disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||displayedChoice!==null}
    pending={busy} error={error} stale={stale} playerCount={state.playerCount} survivorCount={state.survivorCount} onAnswer={choice=>void answer(choice)} onExit={close}
-  /> : visible&&state?.phase==='final'&&state.joined&&state.eliminatedAt===null ? <ScrollView contentContainerStyle={s.page}><Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text><WinnerResult rehearsal={state.isRehearsal} finalists={state.survivorCount} players={state.playerCount} payout={state.payouts?.find(p=>p.wallet===address)} onHome={close}/></ScrollView> : <ScrollView contentContainerStyle={s.page}>
+  /> : visible&&state?.phase==='final'&&state.joined&&state.eliminatedAt===null ? <ScrollView contentContainerStyle={s.page}><Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text><WinnerResult rehearsal={state.isRehearsal} finalists={state.survivorCount} players={state.playerCount} payout={state.payouts?.find(p=>p.wallet===address)} onHome={close}/>{state.recap?<CrowdRecap questions={state.recap}/>:null}</ScrollView> : <ScrollView contentContainerStyle={s.page}>
    <Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text>
    <Text style={s.tag}>{state?.isRehearsal?'LIVE REHEARSAL':'LIVE GAME · DEVNET'}</Text>
    {error?<Text style={s.error}>{error}</Text>:null}
@@ -123,11 +126,13 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
     {!state.isRehearsal&&<><Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':sol(balance)+' SOL'}</Text><Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable></>}
     {state.phase==='final'&&<>
      <Text style={s.clock}>FINISH</Text>
-     <Text style={s.title}>{state.joined&&state.eliminatedAt===null?'You made it!':'Thanks for playing.'}</Text>
-     <Text style={s.body}>{state.survivorCount} finalists out of {state.playerCount} players.</Text>
+     <Text style={s.title}>{state.joined&&state.eliminatedAt===null?'You made it!':state.joined?'The crowd surprised you.':'The room has spoken.'}</Text>
+     <Text style={s.body}>{state.survivorCount} finalists out of {state.playerCount} people in the room.</Text>
+     {state.eliminatedAt!==null&&state.recap?.find(q=>q.number===state.eliminatedAt)?<Text style={s.body}>{personalCrowdResult(state.recap.find(q=>q.number===state.eliminatedAt)!)}</Text>:null}
      {state.isRehearsal?<Text style={s.body}>Rehearsal complete — no payouts are sent.</Text>:state.payouts?.map(p=><View key={p.wallet} style={s.card}><Text style={s.body}>{p.wallet===address?'You':p.wallet.slice(0,4)+'…'+p.wallet.slice(-4)} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}
     </>}
    </>}
+   {state?.phase==='final'&&state.recap?<CrowdRecap questions={state.recap}/>:null}
    <Pressable accessibilityRole="button" style={s.back} onPress={close}><Text style={s.link}>Back to home</Text></Pressable>
   </ScrollView>}
   </SafeAreaView>
