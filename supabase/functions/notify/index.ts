@@ -76,7 +76,7 @@ Deno.serve(async req => {
     const from = new Date(now + 4 * 60_000).toISOString();
     const to = new Date(now + 6 * 60_000).toISOString();
     const { data: rounds, error: roundError } = await db.from('hundo_rounds')
-      .select('id,starts_at,is_rehearsal').eq('is_rehearsal', false).gt('starts_at', from).lte('starts_at', to).order('starts_at').limit(3);
+      .select('id,starts_at,is_rehearsal').gt('starts_at', from).lte('starts_at', to).order('starts_at').limit(3);
     if (roundError) throw roundError;
     if (!rounds?.length) return json({ sent: 0, rounds: 0 });
 
@@ -86,6 +86,9 @@ Deno.serve(async req => {
     let failed = 0;
     const token = await accessToken(account);
     for (const round of rounds) {
+      const { count, error: questionError } = await db.from('hundo_questions').select('number', { count: 'exact', head: true }).eq('round_id', round.id);
+      if (questionError) throw questionError;
+      if (count !== 10) continue;
       for (const device of devices ?? []) {
         const { data: inserted, error: insertError } = await db.from('hundo_push_deliveries').insert({ round_id: round.id, installation_id: device.installation_id, token: device.token }).select('round_id,installation_id').maybeSingle();
         if (insertError && insertError.code !== '23505') throw insertError;

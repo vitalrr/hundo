@@ -6,6 +6,12 @@ import * as Crypto from 'expo-crypto';
 export const GAME_CHANNEL='hundo-games';
 const DEVICE_ID_KEY='hundo-notification-installation';
 
+if(Platform.OS==='android'){
+ Notifications.setNotificationHandler({
+  handleNotification:async()=>({shouldShowAlert:true,shouldPlaySound:true,shouldSetBadge:false}),
+ });
+}
+
 export async function getGamePushInstallationId(){
  let installationId=await AsyncStorage.getItem(DEVICE_ID_KEY);
  if(!installationId){installationId=Crypto.randomUUID();await AsyncStorage.setItem(DEVICE_ID_KEY,installationId);}

@@ -11,5 +11,5 @@ The private device table and wallet-authenticated `push-register`, `push-status`
 Next steps:
 
 - Create the dedicated personal sender key, then store `FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID=hundo-3d60e`, and `NOTIFICATION_CRON_SECRET` only in Supabase server secrets, never in the APK or Git.
-- Deploy `supabase/functions/notify`, and call it from a private Supabase schedule every minute with `X-Hundo-Notify-Secret`. It selects a real round five minutes away, deduplicates each device in `hundo_push_deliveries`, and disables unregistered FCM tokens.
+- Deploy `supabase/functions/notify`, and call it from a private Supabase schedule every minute with `X-Hundo-Notify-Secret`. It selects a ready round five minutes away, including rehearsals, deduplicates each device in `hundo_push_deliveries`, and disables unregistered FCM tokens.
 - Test opt-in, opt-out, locked-phone delivery and notification opening on Seeker before marking this feature ready.

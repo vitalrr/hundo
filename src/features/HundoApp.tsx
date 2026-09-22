@@ -16,7 +16,7 @@ import { CrowdRecap } from './CrowdRecap';
 import { personalCrowdResult } from '../game/crowd';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome } from '../game/presentation';
-import { getGamePushInstallationId, requestGamePushRegistration } from '../services/gameNotifications';
+import { getGamePushInstallationId, requestGamePushRegistration, subscribeToGameNotification } from '../services/gameNotifications';
 
 type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'practice';
 const letters = ['A', 'B', 'C', 'D'];
@@ -60,6 +60,13 @@ export function HundoApp() {
     void getGamePushInstallationId().then(installationId => request<{enabled:boolean}>('push-status', { installationId })).then(result => { if (!stopped) setPushEnabled(result.enabled); }).catch(() => { if (!stopped) setPushEnabled(false); });
     return () => { stopped = true; };
   }, [address]);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    return subscribeToGameNotification(() => {
+      setScreen('lobby');
+      setLiveOpen(true);
+    });
+  }, []);
   useEffect(() => {
     if (screen === 'countdown' && now >= startedAt) { setScreen('play'); return; }
     if (screen !== 'play') return;
