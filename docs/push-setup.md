@@ -10,6 +10,4 @@ The private device table and wallet-authenticated `push-register`, `push-status`
 
 Supabase `game` and `notify` functions are deployed. The `notify` function has legacy JWT verification off and checks `X-Hundo-Notify-Secret` against `NOTIFICATION_CRON_SECRET` itself. `FCM_SERVICE_ACCOUNT_JSON`, `FCM_PROJECT_ID`, and `NOTIFICATION_CRON_SECRET` are stored in Supabase Edge Function secrets. The cron secret is also stored in Supabase Vault as `hundo_notify_cron_secret`; do not put it in Git or the APK. The active `hundo-notify-due-rounds` pg_cron job calls `notify` each minute through pg_net. A direct pg_net call returned HTTP 200 with `{"sent":0,"rounds":0}` when no round was due.
 
-Next steps:
-
-- Test opt-in, opt-out, locked-phone delivery and notification opening on Seeker before marking this feature ready.
+On 2026-09-22, the Seeker registered one enabled device. A rehearsal round with ten questions triggered the scheduled sender; `hundo_push_deliveries` recorded one `sent` delivery. The user confirmed that the notification appeared on the locked Seeker and tapping it opened hundo. The opt-out flow still needs a device check.
