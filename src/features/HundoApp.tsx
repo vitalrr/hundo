@@ -16,6 +16,7 @@ import { CrowdRecap } from './CrowdRecap';
 import { personalCrowdResult } from '../game/crowd';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome } from '../game/presentation';
+import { getGamePushInstallationId, requestGamePushRegistration } from '../services/gameNotifications';
 
 type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'practice';
 const letters = ['A', 'B', 'C', 'D'];
@@ -33,6 +34,8 @@ export function HundoApp() {
   const [liveOpen, setLiveOpen] = useState(false);
   const [liveVisible, setLiveVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [answers, setAnswers] = useState<Record<number, Choice>>({});
@@ -51,6 +54,12 @@ export function HundoApp() {
     const subscription = AppState.addEventListener('change', () => setNow(Date.now()));
     return () => { clearInterval(id); subscription.remove(); };
   }, []);
+  useEffect(() => {
+    if (!address || !API_URL) { setPushEnabled(null); return; }
+    let stopped = false;
+    void getGamePushInstallationId().then(installationId => request<{enabled:boolean}>('push-status', { installationId })).then(result => { if (!stopped) setPushEnabled(result.enabled); }).catch(() => { if (!stopped) setPushEnabled(false); });
+    return () => { stopped = true; };
+  }, [address]);
   useEffect(() => {
     if (screen === 'countdown' && now >= startedAt) { setScreen('play'); return; }
     if (screen !== 'play') return;
@@ -89,6 +98,22 @@ export function HundoApp() {
     } catch (e) { Alert.alert('Connect wallet', e instanceof Error ? e.message : 'Could not connect. Please try again.'); }
     finally { setBusy(false); }
   }
+  async function setGameReminders(enabled: boolean) {
+    if (!address || !API_URL) return;
+    setPushBusy(true);
+    try {
+      const installationId = await getGamePushInstallationId();
+      if (enabled) {
+        const registration = await requestGamePushRegistration();
+        await request('push-register', registration);
+      } else {
+        await request('push-disable', { installationId });
+      }
+      setPushEnabled(enabled);
+    } catch (e) {
+      Alert.alert(enabled ? 'Game reminders' : 'Game reminders off', e instanceof Error ? e.message : 'Could not update reminders.');
+    } finally { setPushBusy(false); }
+  }
   function leave() {
     if (Platform.OS === 'web' && (screen === 'play' || screen === 'countdown')) { if (window.confirm('Leave the demo? You can start again anytime.')) setScreen('lobby'); return; }
     if (screen === 'play' || screen === 'countdown') Alert.alert('Leave the demo?', 'You can start again anytime.', [{ text: 'Stay', style: 'cancel' }, { text: 'Leave', onPress: () => setScreen('lobby') }]);
@@ -115,6 +140,7 @@ export function HundoApp() {
       </View>
       <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? nextRound.playerCount === 0 ? 'Be the first in the room' : `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'person' : 'people'} in the room` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
       {address ? <Text style={s.body}>● Wallet {address.slice(0, 5)}…{address.slice(-5)} connected · Devnet</Text> : <Button title={busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy} />}
+      {API_URL && address && pushEnabled !== null ? <Button title={pushBusy ? 'Updating reminders…' : pushEnabled ? 'Game reminders on · Turn off' : 'Get game reminders ↗'} onPress={()=>void setGameReminders(!pushEnabled)} secondary disabled={pushBusy} /> : null}
       {API_URL && address ? <Button title="Join the room ↗" onPress={()=>setLiveOpen(true)}/> : null}
       <Button title="See how it works ↗" onPress={()=>address&&API_URL?setScreen('practice'):startDemo()} secondary />
       <Text style={s.footnote}>{address&&API_URL?'Practice on a past crowd':'Practice with a demo crowd'}</Text>

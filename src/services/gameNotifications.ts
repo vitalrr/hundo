@@ -6,6 +6,12 @@ import * as Crypto from 'expo-crypto';
 export const GAME_CHANNEL='hundo-games';
 const DEVICE_ID_KEY='hundo-notification-installation';
 
+export async function getGamePushInstallationId(){
+ let installationId=await AsyncStorage.getItem(DEVICE_ID_KEY);
+ if(!installationId){installationId=Crypto.randomUUID();await AsyncStorage.setItem(DEVICE_ID_KEY,installationId);}
+ return installationId;
+}
+
 // FCM credentials are configured in the native Android build, never here.
 // This module is called only after the user explicitly enables reminders.
 export async function requestGamePushRegistration(){
@@ -19,8 +25,7 @@ export async function requestGamePushRegistration(){
  if(!permission.granted)throw new Error('Allow notifications in Android settings to receive game reminders.');
  const nativeToken=await Notifications.getDevicePushTokenAsync();
  if(typeof nativeToken.data!=='string')throw new Error('Could not register this phone. Please try again.');
- let installationId=await AsyncStorage.getItem(DEVICE_ID_KEY);
- if(!installationId){installationId=Crypto.randomUUID();await AsyncStorage.setItem(DEVICE_ID_KEY,installationId);}
+ const installationId=await getGamePushInstallationId();
  return {installationId,token:nativeToken.data};
 }
 
