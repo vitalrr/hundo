@@ -4,6 +4,7 @@ import { answerTone, type StagePhase } from '../game/presentation';
 import { useRoundAudio } from '../game/useRoundAudio';
 import { CountdownCoins } from './CountdownCoins';
 import { personalCrowdResult } from '../game/crowd';
+import { ANSWER_MS } from '../game/rules';
 
 type Props = {
  phase: StagePhase; index: number; seconds: number; remainingMs: number;
@@ -38,8 +39,10 @@ export function GameStage(p: Props) {
   {p.outcome==='spectator'&&<View style={s.spectatorBanner}><Text style={s.spectatorTitle}>YOU’RE WATCHING</Text><Text style={s.spectatorNote}>Your run is over. See who makes the final.</Text></View>}
   <View style={s.row}><Text style={s.kicker}>QUESTION {String(p.index+1).padStart(2,'0')} / 10</Text><Text style={s.badge}>{p.alive&&p.joined?'● PLAYING':'◉ WATCHING'}</Text></View>
   <View style={s.progress}>{Array.from({length:10},(_,i)=><View key={i} style={[s.segment,i<=p.index&&{backgroundColor:purple}]}/>)}</View>
-  <View style={[s.row,s.timerRow]}><View style={s.digits}><Text allowFontScaling={false} style={[s.timer,urgent&&{color:red}]}>{String(p.seconds).padStart(2,'0')}</Text><Text style={s.seconds}>sec</Text></View><Text style={s.prompt}>{revealed?'NEXT QUESTION\nIN':'NOT YOUR ANSWER.\nTHEIRS.'}</Text></View>
-  <View style={s.timeTrack}><View style={[s.timeFill,{width:`${Math.max(0,Math.min(100,p.remainingMs/(revealed?5000:10000)*100))}%`,backgroundColor:urgent?red:purple}]}/></View>
+  {revealed?<View style={s.revealHeading}><Text style={s.revealKicker}>THE CROWD CHOSE</Text><Text style={s.revealSub}>See what most players picked.</Text></View>:<>
+   <View style={[s.row,s.timerRow]}><View style={s.digits}><Text allowFontScaling={false} style={[s.timer,urgent&&{color:red}]}>{String(p.seconds).padStart(2,'0')}</Text><Text style={s.seconds}>sec</Text></View><Text style={s.prompt}>NOT YOUR ANSWER.{'\n'}THEIRS.</Text></View>
+   <View style={s.timeTrack}><View style={[s.timeFill,{width:`${Math.max(0,Math.min(100,p.remainingMs/ANSWER_MS*100))}%`,backgroundColor:urgent?red:purple}]}/></View>
+  </>}
   <Text style={s.question}>{p.question?.text ?? 'Loading question…'}</Text><Text style={[s.note,{textAlign:'left',marginBottom:4}]}>What will most players say?</Text>
   {p.question?.options.map((option,i)=>{
    const tone=answerTone(p.choice,i,revealed,p.leaders??[]);
@@ -55,6 +58,7 @@ export function GameStage(p: Props) {
  </ScrollView>;
 }
 const s=StyleSheet.create({
+ revealHeading:{minHeight:112,justifyContent:'center',gap:4},revealKicker:{color:purple,fontSize:21,fontWeight:'900',letterSpacing:1},revealSub:{color:'#625975',fontSize:14},
  spectatorBanner:{backgroundColor:'#DAD2EB',borderRadius:18,padding:18,gap:6},spectatorTitle:{color:'#55358A',fontSize:24,fontWeight:'900'},spectatorNote:{color:'#584D68',fontSize:13,lineHeight:18},spectatorOption:{backgroundColor:'#E1DFE8',borderColor:'#C7C1D3'},
  timerRow:{minHeight:112,paddingVertical:6,overflow:'visible'},digits:{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:6,overflow:'visible'},countdownBox:{minHeight:204,width:'100%',alignItems:'center',justifyContent:'center',paddingVertical:10,overflow:'visible'},
  page:{flexGrow:1,width:'100%',maxWidth:600,alignSelf:'center',padding:22,paddingTop:12,gap:12},

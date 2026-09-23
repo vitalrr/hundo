@@ -2,7 +2,7 @@
   "expo": {
     "name": "hundo",
     "slug": "hundo",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "orientation": "portrait",
     "icon": "./assets/hundo-icon.png",
     "userInterfaceStyle": "light",
@@ -21,7 +21,8 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "versionCode": 2,
+      "versionCode": 3,
+      "allowBackup": false,
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/hundo-adaptive.png",
@@ -33,6 +34,6 @@
       "favicon": "./assets/hundo-icon.png"
     },
     "scheme": "hundo",
-    "plugins": [["expo-notifications", {"color":"#7047EB", "defaultChannel":"hundo-games"}]]
+    "plugins": [["expo-notifications", {"color":"#7047EB", "defaultChannel":"hundo-games"}], "expo-secure-store"]
   }
 }

@@ -5,8 +5,9 @@ import { StatusBar } from 'expo-status-bar';
 import { Buffer } from 'buffer';
 import { useMobileWallet } from '../utils/useMobileWallet';
 import { demoCounts, demoQuestions } from '../game/demo';
-import { questionPhase, type Choice } from '../game/rules';
-import { API_URL, request, setSession } from '../services/api';
+import { ANSWER_MS, QUESTION_MS, questionPhase, type Choice } from '../game/rules';
+import { API_URL, ApiError, request, setSession } from '../services/api';
+import { clearGameSession, loadGameSession, saveGameSession } from '../services/gameSession';
 import { LiveRound } from './LiveRound';
 import { Archive } from './Archive';
 import { useHome } from '../services/useHome';
@@ -34,6 +35,7 @@ export function HundoApp() {
   const [liveOpen, setLiveOpen] = useState(false);
   const [liveVisible, setLiveVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [restoringSession, setRestoringSession] = useState(Platform.OS !== 'web' && Boolean(API_URL));
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
   const [startedAt, setStartedAt] = useState(0);
@@ -55,6 +57,37 @@ export function HundoApp() {
     return () => { clearInterval(id); subscription.remove(); };
   }, []);
   useEffect(() => {
+    if (Platform.OS === 'web' || !API_URL) return;
+    let active = true;
+    void (async () => {
+      try {
+        const saved = await loadGameSession();
+        if (!saved || !active) return;
+        setSession(saved.token);
+        try {
+          const verified = await request<{ wallet: string }>('session');
+          if (!active) return;
+          if (verified.wallet !== saved.wallet) {
+            setSession('');
+            await clearGameSession();
+            return;
+          }
+        } catch (error) {
+          if (!active) return;
+          if (error instanceof ApiError && error.status === 401) {
+            setSession('');
+            await clearGameSession();
+            return;
+          }
+          // Keep the saved login through a temporary network outage.
+        }
+        if (active) { setAddress(saved.wallet); setScreen('lobby'); }
+      } catch { setSession(''); }
+      finally { if (active) setRestoringSession(false); }
+    })();
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
     if (!address || !API_URL) { setPushEnabled(null); return; }
     let stopped = false;
     void getGamePushInstallationId().then(installationId => request<{enabled:boolean}>('push-status', { installationId })).then(result => { if (!stopped) setPushEnabled(result.enabled); }).catch(() => { if (!stopped) setPushEnabled(false); });
@@ -71,7 +104,7 @@ export function HundoApp() {
     if (screen === 'countdown' && now >= startedAt) { setScreen('play'); return; }
     if (screen !== 'play') return;
     for (let i = 0; i < 10; i++) {
-      if (now < startedAt + i * 15000 + 10000 || settled.current.has(i)) continue;
+      if (now < startedAt + i * QUESTION_MS + ANSWER_MS || settled.current.has(i)) continue;
       settled.current.add(i);
       const choice = answerRef.current[i];
       const votes = [...demoCounts[i]];
@@ -100,6 +133,8 @@ export function HundoApp() {
       if (account.signedMessage) {
         const verified = await request<{ token: string }>('authenticate', { id: account.id, signedMessage: Buffer.from(account.signedMessage).toString('base64') });
         setSession(verified.token);
+        try { await saveGameSession({ wallet: publicKey, token: verified.token }); }
+        catch { Alert.alert('Wallet connected', 'This phone could not save your session. You may need to connect again after closing hundo.'); }
       }
       setAddress(publicKey); setScreen('lobby');
     } catch (e) { Alert.alert('Connect wallet', e instanceof Error ? e.message : 'Could not connect. Please try again.'); }
@@ -143,10 +178,10 @@ export function HundoApp() {
       <View style={s.rulesPanel}>
         <Text style={s.rulesText}>Don't guess the answer. Guess the crowd.</Text>
         <View style={s.rulesDivider} />
-        <View style={s.metricsRow}><Text style={s.rulesMetric}>10 questions</Text><Text style={s.metricsDot}>·</Text><Text style={s.rulesMetric}>10 seconds</Text></View>
+        <View style={s.metricsRow}><Text style={s.rulesMetric}>10 questions</Text><Text style={s.metricsDot}>·</Text><Text style={s.rulesMetric}>15 seconds</Text></View>
       </View>
       <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? nextRound.playerCount === 0 ? 'Be the first in the room' : `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'person' : 'people'} in the room` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
-      {address ? <Text style={s.body}>● Wallet {address.slice(0, 5)}…{address.slice(-5)} connected · Devnet</Text> : <Button title={busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy} />}
+      {address ? <Text style={s.body}>● Wallet {address.slice(0, 5)}…{address.slice(-5)} connected · Devnet</Text> : <Button title={restoringSession ? 'Restoring wallet…' : busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy || restoringSession} />}
       {API_URL && address && pushEnabled !== null ? <Button title={pushBusy ? 'Updating reminders…' : pushEnabled ? 'Game reminders on · Turn off' : 'Get game reminders ↗'} onPress={()=>void setGameReminders(!pushEnabled)} secondary disabled={pushBusy} /> : null}
       {API_URL && address ? <Button title="Join the room ↗" onPress={()=>setLiveOpen(true)}/> : null}
       <Button title="See how it works ↗" onPress={()=>address&&API_URL?setScreen('practice'):startDemo()} secondary />

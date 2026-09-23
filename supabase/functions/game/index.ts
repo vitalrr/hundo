@@ -56,9 +56,16 @@ Deno.serve(async req => {
     }
     const token = req.headers.get('X-Hundo-Session') || '';
     if (!/^[a-f0-9]{64}$/.test(token)) return json({ error: 'Подключи кошелёк заново' }, 401);
-    const { data: session, error: sessionError } = await db.from('hundo_sessions').select('wallet').eq('token_hash', await hash(token)).gt('expires_at', new Date().toISOString()).maybeSingle(); check(sessionError);
+    const sessionHash = await hash(token);
+    const { data: session, error: sessionError } = await db.from('hundo_sessions').select('wallet,expires_at').eq('token_hash', sessionHash).gt('expires_at', new Date().toISOString()).maybeSingle(); check(sessionError);
     if (!session) return json({ error: 'Сессия истекла. Подключи кошелёк заново' }, 401);
     const wallet = session.wallet;
+    if (body.action === 'session') {
+      if (new Date(session.expires_at).getTime() < Date.now() + 7 * 86400000) {
+        const { error } = await db.from('hundo_sessions').update({ expires_at: new Date(Date.now() + 30 * 86400000).toISOString() }).eq('token_hash', sessionHash); check(error);
+      }
+      return json({ wallet });
+    }
     if (body.action === 'push-register') {
       const installation = uuid(body.installationId);
       if (typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096 || /\s/.test(body.token)) return json({ error: 'Invalid notification token' }, 400);
@@ -81,7 +88,7 @@ Deno.serve(async req => {
       return json({ roundId: data?.round?.id ?? null });
     }
     if (body.action === 'archive') {
-      const { data: round, error } = await db.from('hundo_rounds').select('id,starts_at').lt('starts_at', new Date(Date.now() - 150000).toISOString()).order('starts_at', { ascending: false }).limit(1).maybeSingle(); check(error);
+      const { data: round, error } = await db.from('hundo_rounds').select('id,starts_at').lt('starts_at', new Date(Date.now() - 200000).toISOString()).order('starts_at', { ascending: false }).limit(1).maybeSingle(); check(error);
       if (!round) return json({ round: null });
       const settled = await db.rpc('hundo_settle', { p_round: round.id }); check(settled.error);
       const { data: questions, error: questionError } = await db.from('hundo_questions').select('number,text,options,counts,leaders').eq('round_id', round.id).order('number'); check(questionError);

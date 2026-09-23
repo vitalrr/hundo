@@ -4,7 +4,7 @@ A daily live game of collective instinct for Solana Seeker. Pick the answer you 
 
 ## Play
 
-Connect a wallet with Mobile Wallet Adapter, join before the scheduled start and answer ten questions. Each question gives you ten seconds, followed by a five-second reveal. Players who pick a leading option advance. Tied leaders all advance, a missed answer eliminates, and spectators cannot vote. The server controls deadlines and settlement.
+Connect a wallet with Mobile Wallet Adapter, join before the scheduled start and answer ten questions. Each question gives you fifteen seconds, followed by a five-second result reveal without a countdown. Players who pick a leading option advance. Tied leaders all advance, a missed answer eliminates, and spectators cannot vote. The server controls deadlines and settlement.
 
 The app includes an offline demo, a 15-second countdown with music, live percentage reveals, spectator mode and a winner screen. The daily schedule uses **19:00 UTC** and displays local time on each phone.
 

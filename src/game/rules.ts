@@ -1,6 +1,9 @@
 export type Choice = 0 | 1 | 2 | 3;
 export type Vote = { wallet: string; choice: Choice; receivedAt: number };
 export type Question = { id: string; text: string; options: [string, string, string, string] };
+export const ANSWER_MS = 15_000;
+export const REVEAL_MS = 5_000;
+export const QUESTION_MS = ANSWER_MS + REVEAL_MS;
 
 /** Only eligible, on-time votes enter this function. Equal leading options all win. */
 export function settle(votes: Vote[], cap?: number) {
@@ -27,8 +30,8 @@ export function splitPot(lamports: bigint, winners: number) {
 export function questionPhase(now: number, startsAt: number, count = 10) {
   const elapsed = now - startsAt;
   if (elapsed < 0) return { phase: 'lobby' as const, index: 0, remaining: -elapsed };
-  const index = Math.floor(elapsed / 15_000);
+  const index = Math.floor(elapsed / QUESTION_MS);
   if (index >= count) return { phase: 'final' as const, index: count - 1, remaining: 0 };
-  const offset = elapsed % 15_000;
-  return { phase: offset < 10_000 ? 'question' as const : 'result' as const, index, remaining: (offset < 10_000 ? 10_000 : 15_000) - offset };
+  const offset = elapsed % QUESTION_MS;
+  return { phase: offset < ANSWER_MS ? 'question' as const : 'result' as const, index, remaining: (offset < ANSWER_MS ? ANSWER_MS : QUESTION_MS) - offset };
 }

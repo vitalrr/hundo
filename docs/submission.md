@@ -1,7 +1,7 @@
 # hundo: CLOCK IN submission draft
 
 ## Short description
-hundo is a daily live game for Solana Seeker. Guess what the other active players will choose. Ten questions, ten seconds per answer, one shared reveal. The players create the winning answer when voting closes.
+hundo is a daily live game for Solana Seeker. Guess what the other active players will choose. Ten questions, fifteen seconds per answer, one shared reveal. The players create the winning answer when voting closes.
 
 ## Product pitch
 Crypto communities already share a sense of humor. hundo turns it into a daily appointment: connect a wallet, join the room and predict the room's instincts. Questions draw on familiar community habits rather than obscure facts. Search cannot reveal an outcome that players have not created yet, although coordinated players and automated prediction remain real risks.
@@ -30,7 +30,7 @@ The announcement requests an Android APK, GitHub source, a demo video and a pitc
 
 12–25 seconds: Connect the wallet and join a rehearsal. “A signed wallet challenge logs me in. This rehearsal has no entry transaction or payout.” Do not expose wallet recovery material.
 
-25–45 seconds: Show the countdown and the first answer. “We get ten seconds. Answers stay hidden until voting closes.” Keep the recording's audio audible.
+25–45 seconds: Show the countdown and the first answer. “We get fifteen seconds. Answers stay hidden until voting closes.” Keep the recording's audio audible.
 
 45–60 seconds: Show vote percentages and advancement. “The most popular option wins. Only active players vote. Tied leading options all advance.”
 

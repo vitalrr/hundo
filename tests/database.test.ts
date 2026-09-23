@@ -3,11 +3,18 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { PGlite } from '@electric-sql/pglite';
 const migration = await readFile(new URL('../supabase/migrations/202609180001_hundo.sql', import.meta.url), 'utf8');
+const homeMigration = await readFile(new URL('../supabase/migrations/202609190001_home.sql', import.meta.url), 'utf8');
+const timingMigration = await readFile(new URL('../supabase/migrations/202609220004_five_second_results.sql', import.meta.url), 'utf8');
+async function applyGameMigrations(db: PGlite) {
+  await db.exec(migration);
+  await db.exec(homeMigration);
+  await db.exec(timingMigration);
+}
 test('six-player round restores authoritative state after missed responses and rejects spectator votes', async () => {
  const db = new PGlite();
  try {
   await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');
-  await db.exec(migration);
+  await applyGameMigrations(db);
   const round = '30000000-0000-4000-8000-000000000003';
   await db.query("insert into hundo_rounds(id,starts_at,pot_wallet,pot_lamports) values($1,clock_timestamp()+interval '1 hour','test-pot',101)",[round]);
   for(let n=0;n<10;n++) await db.query("insert into hundo_questions values($1,$2,'Test',array['A','B','C','D'],null,null)",[round,n]);
@@ -16,7 +23,7 @@ test('six-player round restores authoritative state after missed responses and r
   const answer = (player:string,n:number,choice:number) => db.query('select hundo_answer($1,$2,$3,$4)',[round,player,n,choice]);
   const snapshot = async (player:string) => (await db.query<{s:any}>('select hundo_snapshot($1,$2) s',[round,player])).rows[0].s;
   for(let n=0;n<10;n++) {
-   await time(n*15+1);
+   await time(n*20+1);
    if(n===0) {
     for(const player of ['a','b','c','d']) await answer(player,n,0);
     for(const player of ['e','f']) await answer(player,n,1);
@@ -39,12 +46,12 @@ test('six-player round restores authoritative state after missed responses and r
    const spectator = await snapshot('outside');
    assert.equal(spectator.joined,false);assert.equal(spectator.counts,undefined);
    if(n===1) {
-    await time(26);
+    await time(36);
     const result=await snapshot('e');
     assert.deepEqual(result.counts,[2,2,0,0]);assert.equal(result.survivorCount,4);assert.equal(result.eliminatedAt,0);
    }
   }
-  await time(151);
+  await time(201);
   const final=await snapshot('a');
   assert.equal(final.phase,'final');assert.equal(final.playerCount,6);assert.equal(final.survivorCount,3);
   assert.deepEqual(final.payouts.map((p:any)=>p.wallet).sort(),['a','b','c']);
@@ -57,7 +64,7 @@ test('database enforces secrecy, eligible votes, deadlines, ties and exactly-onc
  const db = new PGlite();
  try {
   await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');
-  await db.exec(migration);
+  await applyGameMigrations(db);
   const r = '10000000-0000-4000-8000-000000000001';
   await db.query("insert into hundo_rounds(id,starts_at,pot_wallet,pot_lamports) values($1,clock_timestamp()+interval '1 hour','pot',100)", [r]);
   for(let i=0;i<10;i++) await db.query("insert into hundo_questions(round_id,number,text,options) values($1,$2,'Q',array['a','b','c','d'])",[r,i]);
@@ -74,14 +81,14 @@ test('database enforces secrecy, eligible votes, deadlines, ties and exactly-onc
   await assert.rejects(db.query('select * from hundo_answers'));
   await assert.rejects(db.query('select hundo_snapshot($1,$2)',[r,'a']));
   await db.exec('reset role');
-  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '11 seconds' where id=$1",[r]);
+  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '16 seconds' where id=$1",[r]);
   const closed:any = (await db.query('select hundo_snapshot($1,$2) as s',[r,'a'])).rows[0];
   assert.deepEqual(closed.s.counts,[2,2,1,0]); assert.deepEqual(closed.s.leaders,[0,1]); assert.equal(closed.s.survivorCount,4);
   await assert.rejects(db.query('select hundo_answer($1,$2,0,0)',[r,'a']));
-  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '16 seconds' where id=$1",[r]);
+  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '21 seconds' where id=$1",[r]);
   await assert.rejects(db.query('select hundo_answer($1,$2,1,0)',[r,'e']));
   for(const w of ['a','b','c','d']) await db.query('select hundo_answer($1,$2,1,0)',[r,w]);
-  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '151 seconds' where id=$1",[r]);
+  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '201 seconds' where id=$1",[r]);
   const final:any=(await db.query('select hundo_snapshot($1,$2) as s',[r,'a'])).rows[0];
   assert.equal(final.s.phase,'final');assert.equal(final.s.survivorCount,0);assert.deepEqual(final.s.payouts,[]);
   const again:any=(await db.query('select hundo_snapshot($1,$2) as s',[r,'a'])).rows[0];assert.deepEqual(again.s.payouts,[]);
@@ -91,7 +98,7 @@ test('database enforces secrecy, eligible votes, deadlines, ties and exactly-onc
 test('database speed cutoff keeps timestamp ties; final payouts are integer and idempotent', async () => {
  const db=new PGlite();
  try {
-  await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');await db.exec(migration);
+  await db.exec('create role anon; create role authenticated; create role service_role bypassrls;');await applyGameMigrations(db);
   const r='20000000-0000-4000-8000-000000000002';
   await db.query("insert into hundo_rounds(id,starts_at,pot_wallet,pot_lamports,survivor_cap) values($1,clock_timestamp()+interval '1 hour','pot',101,2)",[r]);
   for(let i=0;i<10;i++)await db.query("insert into hundo_questions(round_id,number,text,options) values($1,$2,'Q',array['a','b','c','d'])",[r,i]);
@@ -101,14 +108,14 @@ test('database speed cutoff keeps timestamp ties; final payouts are integer and 
   await db.query("update hundo_answers set received_at='2026-09-18 10:00:01+00' where round_id=$1 and wallet='a'",[r]);
   await db.query("update hundo_answers set received_at='2026-09-18 10:00:02+00' where round_id=$1 and wallet in ('b','c')",[r]);
   await db.query("update hundo_answers set received_at='2026-09-18 10:00:03+00' where round_id=$1 and wallet='d'",[r]);
-  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '11 seconds' where id=$1",[r]);
+  await db.query("update hundo_rounds set starts_at=clock_timestamp()-interval '16 seconds' where id=$1",[r]);
   await db.query('select hundo_settle($1)',[r]);
   const active=await db.query<{wallet:string}>('select wallet from hundo_players where round_id=$1 and eliminated_at is null order by wallet',[r]);assert.deepEqual(active.rows.map(x=>x.wallet),['a','b','c']);
   await db.query('update hundo_rounds set survivor_cap=null where id=$1',[r]);
   for(let i=1;i<10;i++){
-   await db.query("update hundo_rounds set starts_at=clock_timestamp()-make_interval(secs=>$2) where id=$1",[r,i*15+1]);
+   await db.query("update hundo_rounds set starts_at=clock_timestamp()-make_interval(secs=>$2) where id=$1",[r,i*20+1]);
    for(const w of ['a','b','c'])await db.query('select hundo_answer($1,$2,$3,0)',[r,w,i]);
-   await db.query("update hundo_rounds set starts_at=clock_timestamp()-make_interval(secs=>$2) where id=$1",[r,i*15+11]);
+   await db.query("update hundo_rounds set starts_at=clock_timestamp()-make_interval(secs=>$2) where id=$1",[r,i*20+16]);
    await db.query('select hundo_settle($1)',[r]);
   }
   await db.query('select hundo_settle($1)',[r]);

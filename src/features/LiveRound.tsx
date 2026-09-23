@@ -13,6 +13,7 @@ import { CrowdRecap } from './CrowdRecap';
 import { personalCrowdResult, type CrowdQuestion } from '../game/crowd';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome, shouldTakeOver } from '../game/presentation';
+import { ANSWER_MS, QUESTION_MS } from '../game/rules';
 
 type Snapshot = {
  roundId:string;serverTime:string;startsAt:string;phase:'lobby'|'question'|'result'|'final';index:number;
@@ -39,16 +40,28 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  useEffect(()=>{
   let stopped=false;let timer:ReturnType<typeof setTimeout>;
   async function poll(){
+   let nextDelay=1000;
    try{
     let id=roundId;
     if(!id||snapshotRef.current?.phase==='final'){
      const latest=await request<{roundId:string|null}>('latest');
      if(latest.roundId&&latest.roundId!==id){id=latest.roundId;if(!stopped){setRoundId(id);setDismissed(null);}}
     }
-    if(id){const sent=performance.now();const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){const received=performance.now();const estimated=Date.parse(next.serverTime)+(received-sent)/2;const previous=synced.current.time+received-synced.current.at;synced.current={at:received,time:synced.current.time?previous+Math.min(100,Math.max(0,estimated-previous)):estimated};setState(next);}}
+    if(id){const sent=performance.now();const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){
+     const received=performance.now();const estimated=Date.parse(next.serverTime)+(received-sent)/2;
+     const previous=synced.current.time+received-synced.current.at;
+     const drift=estimated-previous;
+     synced.current={at:received,time:!synced.current.time||Math.abs(drift)>3000?estimated:previous+Math.max(-150,Math.min(150,drift))};
+     setState(next);
+     if(next.phase==='question'||next.phase==='result'){
+      const boundary=Date.parse(next.startsAt)+next.index*QUESTION_MS+(next.phase==='question'?ANSWER_MS:QUESTION_MS);
+      const untilBoundary=boundary-synced.current.time;
+      nextDelay=untilBoundary<=350?200:Math.min(1000,Math.max(200,untilBoundary+80));
+     }
+    }}
     if(!stopped)setError('');
    }catch(e){if(!stopped)setError(e instanceof Error?e.message:'Connection unavailable');}
-   finally{if(!stopped)timer=setTimeout(poll,1000);}
+   finally{if(!stopped)timer=setTimeout(poll,nextDelay);}
   }
   void poll();return()=>{stopped=true;clearTimeout(timer);};
  },[roundId,address]);
@@ -85,7 +98,7 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  const displayedChoice=state?.myChoice??(state&&state.phase==='question'&&localAnswer?.round===state.roundId&&localAnswer.index===state.index?localAnswer.choice:null);
  const stale=performance.now()-synced.current.at>3000;
  const serverNow=synced.current.time+performance.now()-synced.current.at;
- const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*15000+(state.phase==='question'?10000:15000)):0;
+ const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*QUESTION_MS+(state.phase==='question'?ANSWER_MS:QUESTION_MS)):0;
  const remainingMs=Math.max(0,deadline-serverNow);
  const remaining=Math.ceil(remainingMs/1000);
  const visible=open||!!(state&&dismissed!==state.roundId&&shouldTakeOver(state.phase,remaining));

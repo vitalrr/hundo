@@ -12,12 +12,12 @@ test('speed cap keeps equal-time players at boundary', () => {
 });
 test('zero votes does not manufacture a winner', () => assert.deepEqual(settle([]).leaders, []));
 test('duplicate identity is rejected', () => assert.throws(() => settle([{ wallet: 'a', choice: 0, receivedAt: 1 }, { wallet: 'a', choice: 1, receivedAt: 2 }])));
-test('10-second close and 15-second next-question boundary', () => {
+test('15-second answer and 5-second reveal boundaries', () => {
   assert.equal(questionPhase(999, 1000).phase, 'lobby');
-  assert.equal(questionPhase(10999, 1000).phase, 'question');
-  assert.equal(questionPhase(11000, 1000).phase, 'result');
-  assert.equal(questionPhase(16000, 1000).index, 1);
-  assert.equal(questionPhase(151000, 1000).phase, 'final');
+  assert.equal(questionPhase(15999, 1000).phase, 'question');
+  assert.equal(questionPhase(16000, 1000).phase, 'result');
+  assert.equal(questionPhase(21000, 1000).index, 1);
+  assert.equal(questionPhase(201000, 1000).phase, 'final');
 });
 test('integer payouts conserve pot including remainder and no winners', () => {
   assert.deepEqual(splitPot(100n, 3), { each: 33n, remainder: 1n });
