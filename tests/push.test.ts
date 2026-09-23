@@ -26,3 +26,21 @@ test('push registrations are private, wallet-bound, capped and refreshable',asyn
   await assert.rejects(register('alice',7),/permission denied/);
  }finally{await db.close();}
 });
+
+test('post-game delivery is private and once per round and device',async()=>{
+ const db=new PGlite();
+ try{
+  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
+  await db.exec(await readFile(new URL('../supabase/migrations/202609180001_hundo.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202609210002_push.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202609230001_result_push.sql',import.meta.url),'utf8'));
+  const round='10000000-0000-4000-8000-000000000001';
+  const device='20000000-0000-4000-8000-000000000002';
+  await db.query("insert into hundo_rounds(id,starts_at,pot_wallet,pot_lamports) values($1,clock_timestamp(),'pot',0)",[round]);
+  await db.query("insert into hundo_push_devices(installation_id,wallet,token) values($1,'alice','notification-token-for-results-test')",[device]);
+  await db.query('insert into hundo_result_push_deliveries(round_id,installation_id) values($1,$2)',[round,device]);
+  await assert.rejects(db.query('insert into hundo_result_push_deliveries(round_id,installation_id) values($1,$2)',[round,device]),/unique/);
+  await db.exec('set role anon');
+  await assert.rejects(db.query('select * from hundo_result_push_deliveries'),/permission denied/);
+ }finally{await db.close();}
+});

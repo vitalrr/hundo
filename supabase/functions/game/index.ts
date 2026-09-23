@@ -30,6 +30,20 @@ Deno.serve(async req => {
       const { data, error } = await db.rpc('hundo_home'); check(error);
       return json(data);
     }
+    if (body.action === 'results') {
+      const requestedId = body.roundId == null ? null : uuid(body.roundId);
+      let query = db.from('hundo_rounds').select('id,starts_at,is_rehearsal')
+        .eq('is_rehearsal', false).lte('starts_at', new Date(Date.now() - 200000).toISOString());
+      query = requestedId ? query.eq('id', requestedId) : query.order('starts_at', { ascending: false }).limit(1);
+      const { data: round, error } = await query.maybeSingle(); check(error);
+      if (!round) return json({ round: null, questions: [] });
+      const settled = await db.rpc('hundo_settle', { p_round: round.id }); check(settled.error);
+      const { data: questions, error: questionsError } = await db.from('hundo_questions')
+        .select('number,text,options,counts').eq('round_id', round.id).order('number'); check(questionsError);
+      if (questions?.length !== 10 || questions.some(q => !Array.isArray(q.counts))) return json({ round: null, questions: [] });
+      const { count, error: playersError } = await db.from('hundo_players').select('wallet', { count: 'exact', head: true }).eq('round_id', round.id); check(playersError);
+      return json({ round: { id: round.id, startsAt: round.starts_at, playerCount: count ?? 0 }, questions });
+    }
     if (body.action === 'challenge') {
       const wallet = new PublicKey(body.wallet).toBase58();
       const { count, error: countError } = await db.from('hundo_challenges').select('id', { count: 'exact', head: true }).eq('wallet', wallet).gt('expires_at', new Date().toISOString()); check(countError);

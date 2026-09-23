@@ -14,12 +14,13 @@ import { useHome } from '../services/useHome';
 import { GameStage } from './GameStage';
 import { WinnerResult } from './WinnerResult';
 import { CrowdRecap } from './CrowdRecap';
+import { RoundResults } from './RoundResults';
 import { personalCrowdResult } from '../game/crowd';
 import { SystemChrome } from './SystemChrome';
 import { resultOutcome } from '../game/presentation';
 import { getGamePushInstallationId, requestGamePushRegistration, subscribeToGameNotification } from '../services/gameNotifications';
 
-type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'practice';
+type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'practice' | 'results';
 const letters = ['A', 'B', 'C', 'D'];
 const C = { bg: '#E8FF79', panel: '#F7FFD9', border: '#B5C66D', text: '#202020', muted: '#4C5438', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
 function Button({ title, onPress, secondary, disabled }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean }) {
@@ -34,6 +35,7 @@ export function HundoApp() {
   const [address, setAddress] = useState('');
   const [liveOpen, setLiveOpen] = useState(false);
   const [liveVisible, setLiveVisible] = useState(false);
+  const [resultsRoundId, setResultsRoundId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [restoringSession, setRestoringSession] = useState(Platform.OS !== 'web' && Boolean(API_URL));
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
@@ -81,7 +83,7 @@ export function HundoApp() {
           }
           // Keep the saved login through a temporary network outage.
         }
-        if (active) { setAddress(saved.wallet); setScreen('lobby'); }
+        if (active) { setAddress(saved.wallet); setScreen(current => current === 'results' ? current : 'lobby'); }
       } catch { setSession(''); }
       finally { if (active) setRestoringSession(false); }
     })();
@@ -95,9 +97,12 @@ export function HundoApp() {
   }, [address]);
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    return subscribeToGameNotification(() => {
-      setScreen('lobby');
-      setLiveOpen(true);
+    return subscribeToGameNotification((kind, roundId) => {
+      if (kind === 'game-results') {
+        setResultsRoundId(roundId);setLiveOpen(false);setScreen('results');
+      } else {
+        setScreen('lobby');setLiveOpen(true);
+      }
     });
   }, []);
   useEffect(() => {
@@ -165,7 +170,7 @@ export function HundoApp() {
   const won = alive && screen === 'final';
   const demoStage = screen === 'play' || screen === 'countdown';
   const spectator = !alive && !(phase.phase === 'result' && eliminatedAt === phase.index);
-  return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onPreviewWinner={()=>{setEliminatedAt(null);setScreen('final');}} onAnswer={value=>answer(value as Choice)} onExit={leave}/>:<ScrollView contentContainerStyle={s.page}>
+  return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onPreviewWinner={()=>{setEliminatedAt(null);setScreen('final');}} onAnswer={value=>answer(value as Choice)} onExit={leave}/>:screen==='results'?<RoundResults roundId={resultsRoundId} onBack={()=>setScreen('lobby')}/>:<ScrollView contentContainerStyle={s.page}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{screen === 'final' && <Text style={s.pill}>DEMO</Text>}</View>
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>
@@ -186,6 +191,7 @@ export function HundoApp() {
       {API_URL && address ? <Button title="Join the room ↗" onPress={()=>setLiveOpen(true)}/> : null}
       <Button title="See how it works ↗" onPress={()=>address&&API_URL?setScreen('practice'):startDemo()} secondary />
       <Text style={s.footnote}>{address&&API_URL?'Practice on a past crowd':'Practice with a demo crowd'}</Text>
+      {API_URL ? <Button title="See the latest crowd ↗" onPress={()=>{setResultsRoundId(null);setScreen('results');}} secondary /> : null}
     </>}
     {won && <WinnerResult demo onHome={()=>setScreen('lobby')}/>}
     {screen === 'final' && !won && <>

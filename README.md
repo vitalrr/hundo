@@ -6,7 +6,7 @@ A daily live game of collective instinct for Solana Seeker. Pick the answer you 
 
 Connect a wallet with Mobile Wallet Adapter, join before the scheduled start and answer ten questions. Each question gives you fifteen seconds, followed by a five-second result reveal without a countdown. Players who pick a leading option advance. Tied leaders all advance, a missed answer eliminates, and spectators cannot vote. The server controls deadlines and settlement.
 
-The app includes an offline demo, a 15-second countdown with music, live percentage reveals, spectator mode and a winner screen. The daily schedule uses **19:00 UTC** and displays local time on each phone.
+The app includes an offline demo, a 15-second countdown with music, live percentage reveals, spectator mode and a winner screen. The daily schedule uses **19:00 UTC** and displays local time on each phone. Opt-in Android push reminders arrive before a complete round; a second push links to the public aggregate recap after a completed real round with participants. People who missed the game can also open the latest recap from home.
 
 ## Verified prototype
 
@@ -39,7 +39,7 @@ The preview uses test signing. Prepare a separate signing key and release identi
 
 ## Backend and daily operations
 
-Apply the SQL migrations in `supabase/migrations` in order, then deploy `supabase/functions/game/index.ts`. The function uses Supabase-provided service credentials, verifies wallet sessions and talks to Devnet through `SOLANA_RPC_URL`. The client supplies the public gateway key in `apikey` and `Authorization`. Tables and game RPCs remain restricted to the service role.
+Apply the SQL migrations in `supabase/migrations` in order, then deploy `supabase/functions/game/index.ts` and `supabase/functions/notify/index.ts`. The game function uses Supabase-provided service credentials, verifies wallet sessions and talks to Devnet through `SOLANA_RPC_URL`. The client supplies the public gateway key in `apikey` and `Authorization`. Tables and game RPCs remain restricted to the service role; completed aggregate results have a read-only public endpoint.
 
 [Daily operations](docs/daily-operations.md) covers a seven-day schedule, 70 English questions, duplicate protection and weekly content renewal. The operator creates complete future rounds in one transaction. No laptop cron process is required. Server requests advance settlement when needed.
 

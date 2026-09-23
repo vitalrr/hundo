@@ -35,15 +35,15 @@ export async function requestGamePushRegistration(){
  return {installationId,token:nativeToken.data};
 }
 
-export function subscribeToGameNotification(onOpen:(roundId:string)=>void){
+export function subscribeToGameNotification(onOpen:(kind:'game-reminder'|'game-results',roundId:string)=>void){
  let mounted=true;
  const seen=new Set<string>();
  const handle=(response:Notifications.NotificationResponse|null)=>{
   if(!mounted||!response)return;
   const request=response.notification.request;
   const data=request.content.data;
-  if(data.kind!=='game-reminder'||typeof data.roundId!=='string'||! /^[0-9a-f-]{36}$/i.test(data.roundId)||seen.has(request.identifier))return;
-  seen.add(request.identifier);onOpen(data.roundId);
+  if((data.kind!=='game-reminder'&&data.kind!=='game-results')||typeof data.roundId!=='string'||! /^[0-9a-f-]{36}$/i.test(data.roundId)||seen.has(request.identifier))return;
+  seen.add(request.identifier);onOpen(data.kind,data.roundId);
   void Notifications.clearLastNotificationResponseAsync().catch(()=>{});
  };
  const listener=Notifications.addNotificationResponseReceivedListener(handle);

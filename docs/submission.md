@@ -40,7 +40,7 @@ The announcement requests an Android APK, GitHub source, a demo video and a pitc
 
 ## Short presentation content
 1. **hundo.** A daily game of collective instinct for Solana Seeker.
-2. **The winning answer comes from the players.** Four options. A ten-second vote. Majority determines who advances. There is no fixed answer key.
+2. **The winning answer comes from the players.** Four options. A fifteen-second vote. Majority determines who advances. There is no fixed answer key.
 3. **A daily appointment.** 19:00 UTC. Ten questions per round. A fresh seven-day pack covers 70 original prompts. Return-visit and retention claims remain hypotheses until measured.
 4. **Built for Seeker.** Native wallet login, synchronized rounds, clear voting feedback, music and spectator mode. React Native / Expo with Supabase.
 5. **A working shared round.** One physical Seeker and one simulated Mac client. Ten questions. Two votes each. Two finalists. This is functional evidence, not a load test.

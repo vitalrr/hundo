@@ -29,13 +29,14 @@ const sol = (value:string|number) => (Number(value)/1e9).toLocaleString('en-US',
 export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{address:string;open:boolean;onClose:()=>void;onTakeOver:()=>void;onVisibilityChange:(visible:boolean)=>void}) {
  const [dismissed,setDismissed]=useState<string|null>(null);
  const [foreground,setForeground]=useState(AppState.currentState!=='background');
- useEffect(()=>{const listener=AppState.addEventListener('change',value=>setForeground(value==='active'));return()=>listener.remove();},[]);
+ const [resumeCount,setResumeCount]=useState(0);
+ useEffect(()=>{const listener=AppState.addEventListener('change',value=>{setForeground(value==='active');if(value==='active')setResumeCount(count=>count+1);});return()=>listener.remove();},[]);
  const wallet=useMobileWallet();const [roundId,setRoundId]=useState<string|null>(null);const [state,setState]=useState<Snapshot|null>(null);
  const snapshotRef=useRef(state);snapshotRef.current=state;
  const [localAnswer,setLocalAnswer]=useState<{round:string;index:number;choice:number}|null>(null);
  const submitting=useRef(false);
  const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [balance,setBalance]=useState<number|null>(null);
- const [,setTick]=useState(0);const synced=useRef({at:0,time:0});const pendingEntry=useRef<{round:string;signature:string}|null>(null);
+ const [,setTick]=useState(0);const synced=useRef({offset:0,ready:false,at:0});const pendingEntry=useRef<{round:string;signature:string}|null>(null);
  useEffect(()=>{const timer=setInterval(()=>setTick(n=>n+1),200);return()=>clearInterval(timer);},[]);
  useEffect(()=>{
   let stopped=false;let timer:ReturnType<typeof setTimeout>;
@@ -47,15 +48,15 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
      const latest=await request<{roundId:string|null}>('latest');
      if(latest.roundId&&latest.roundId!==id){id=latest.roundId;if(!stopped){setRoundId(id);setDismissed(null);}}
     }
-    if(id){const sent=performance.now();const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){
-     const received=performance.now();const estimated=Date.parse(next.serverTime)+(received-sent)/2;
-     const previous=synced.current.time+received-synced.current.at;
-     const drift=estimated-previous;
-     synced.current={at:received,time:!synced.current.time||Math.abs(drift)>3000?estimated:previous+Math.max(-150,Math.min(150,drift))};
+    if(id){const sent=Date.now();const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){
+     const received=Date.now();
+     const offset=Date.parse(next.serverTime)-(sent+received)/2;
+     if(!synced.current.ready||Math.abs(offset-synced.current.offset)>250) synced.current.offset=offset;
+     synced.current.ready=true;synced.current.at=received;
      setState(next);
      if(next.phase==='question'||next.phase==='result'){
       const boundary=Date.parse(next.startsAt)+next.index*QUESTION_MS+(next.phase==='question'?ANSWER_MS:QUESTION_MS);
-      const untilBoundary=boundary-synced.current.time;
+      const untilBoundary=boundary-(received+synced.current.offset);
       nextDelay=untilBoundary<=350?200:Math.min(1000,Math.max(200,untilBoundary+80));
      }
     }}
@@ -64,7 +65,7 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    finally{if(!stopped)timer=setTimeout(poll,nextDelay);}
   }
   void poll();return()=>{stopped=true;clearTimeout(timer);};
- },[roundId,address]);
+ },[roundId,address,resumeCount]);
  useEffect(()=>{
   if(!state?.potWallet||state.isRehearsal)return;let stopped=false;
   async function load(){try{const value=await connection.getBalance(new PublicKey(state!.potWallet));if(!stopped)setBalance(value);}catch{if(!stopped)setBalance(null);}}
@@ -96,8 +97,8 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
   finally{submitting.current=false;setBusy(false);}
  }
  const displayedChoice=state?.myChoice??(state&&state.phase==='question'&&localAnswer?.round===state.roundId&&localAnswer.index===state.index?localAnswer.choice:null);
- const stale=performance.now()-synced.current.at>3000;
- const serverNow=synced.current.time+performance.now()-synced.current.at;
+ const stale=!synced.current.ready||Date.now()-synced.current.at>3000;
+ const serverNow=Date.now()+synced.current.offset;
  const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*QUESTION_MS+(state.phase==='question'?ANSWER_MS:QUESTION_MS)):0;
  const remainingMs=Math.max(0,deadline-serverNow);
  const remaining=Math.ceil(remainingMs/1000);

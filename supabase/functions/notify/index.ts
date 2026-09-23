@@ -46,14 +46,16 @@ async function accessToken(serviceAccount: { client_email: string; private_key: 
   return body.access_token;
 }
 
-async function sendFcm(token: string, roundId: string, startsAt: string, bearer: string): Promise<{ ok: boolean; error?: string; unregister?: boolean }> {
+async function sendFcm(token: string, roundId: string, startsAt: string, bearer: string, kind: 'game-reminder' | 'game-results'): Promise<{ ok: boolean; error?: string; unregister?: boolean }> {
   const response = await fetch(`https://fcm.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/messages:send`, {
     method: 'POST',
     headers: { authorization: `Bearer ${bearer}`, 'content-type': 'application/json' },
     body: JSON.stringify({ message: {
       token,
-      notification: { title: 'Hundo starts soon', body: 'The room opens in 5 minutes. Read the crowd.' },
-      data: { kind: 'game-reminder', roundId, startsAt },
+      notification: kind === 'game-reminder'
+        ? { title: 'Hundo starts soon', body: 'The room opens in 5 minutes. Read the crowd.' }
+        : { title: 'The room has spoken', body: 'See what the crowd picked today.' },
+      data: { kind, roundId, startsAt },
       android: { priority: 'HIGH', notification: { channel_id: 'hundo-games', sound: 'default' } },
     } }),
   });
@@ -78,14 +80,20 @@ Deno.serve(async req => {
     const { data: rounds, error: roundError } = await db.from('hundo_rounds')
       .select('id,starts_at,is_rehearsal').gt('starts_at', from).lte('starts_at', to).order('starts_at').limit(3);
     if (roundError) throw roundError;
-    if (!rounds?.length) return json({ sent: 0, rounds: 0 });
+    const { data: completed, error: completedError } = await db.from('hundo_rounds')
+      .select('id,starts_at').eq('is_rehearsal', false)
+      .lte('starts_at', new Date(now - 200000).toISOString())
+      .gt('starts_at', new Date(now - 800000).toISOString())
+      .order('starts_at', { ascending: false }).limit(3);
+    if (completedError) throw completedError;
+    if (!rounds?.length && !completed?.length) return json({ sent: 0, rounds: 0 });
 
     const { data: devices, error: deviceError } = await db.from('hundo_push_devices').select('installation_id,token').eq('enabled', true).limit(5000);
     if (deviceError) throw deviceError;
     let sent = 0;
     let failed = 0;
     const token = await accessToken(account);
-    for (const round of rounds) {
+    for (const round of rounds ?? []) {
       const { count, error: questionError } = await db.from('hundo_questions').select('number', { count: 'exact', head: true }).eq('round_id', round.id);
       if (questionError) throw questionError;
       if (count !== 10) continue;
@@ -93,13 +101,34 @@ Deno.serve(async req => {
         const { data: inserted, error: insertError } = await db.from('hundo_push_deliveries').insert({ round_id: round.id, installation_id: device.installation_id, token: device.token }).select('round_id,installation_id').maybeSingle();
         if (insertError && insertError.code !== '23505') throw insertError;
         if (!inserted) continue; // Another retry already claimed this reminder.
-        const result = await sendFcm(device.token, round.id, round.starts_at, token);
+        const result = await sendFcm(device.token, round.id, round.starts_at, token, 'game-reminder');
         await db.from('hundo_push_deliveries').update({ status: result.ok ? 'sent' : 'failed', attempts: 1, sent_at: result.ok ? new Date().toISOString() : null, last_error: result.error ?? null, updated_at: new Date().toISOString() }).eq('round_id', round.id).eq('installation_id', device.installation_id);
         if (result.unregister) await db.from('hundo_push_devices').update({ enabled: false, updated_at: new Date().toISOString() }).eq('installation_id', device.installation_id);
         if (result.ok) sent++; else failed++;
       }
     }
-    return json({ sent, failed, rounds: rounds.length });
+    for (const round of completed ?? []) {
+      const settled = await db.rpc('hundo_settle', { p_round: round.id });
+      if (settled.error) throw settled.error;
+      const { data: questions, error: questionError } = await db.from('hundo_questions').select('counts').eq('round_id', round.id);
+      if (questionError) throw questionError;
+      if (questions?.length !== 10 || questions.some(q => !Array.isArray(q.counts))) continue;
+      const { count: playerCount, error: playerError } = await db.from('hundo_players').select('wallet', { count: 'exact', head: true }).eq('round_id', round.id);
+      if (playerError) throw playerError;
+      if (!playerCount) continue;
+      for (const device of devices ?? []) {
+        const { data: inserted, error: insertError } = await db.from('hundo_result_push_deliveries')
+          .insert({ round_id: round.id, installation_id: device.installation_id })
+          .select('round_id,installation_id').maybeSingle();
+        if (insertError && insertError.code !== '23505') throw insertError;
+        if (!inserted) continue;
+        const result = await sendFcm(device.token, round.id, round.starts_at, token, 'game-results');
+        await db.from('hundo_result_push_deliveries').update({ status: result.ok ? 'sent' : 'failed', sent_at: result.ok ? new Date().toISOString() : null, last_error: result.error ?? null, updated_at: new Date().toISOString() }).eq('round_id', round.id).eq('installation_id', device.installation_id);
+        if (result.unregister) await db.from('hundo_push_devices').update({ enabled: false, updated_at: new Date().toISOString() }).eq('installation_id', device.installation_id);
+        if (result.ok) sent++; else failed++;
+      }
+    }
+    return json({ sent, failed, rounds: (rounds?.length ?? 0) + (completed?.length ?? 0) });
   } catch (error) {
     console.error(error);
     return json({ error: 'Notification delivery failed' }, 500);
