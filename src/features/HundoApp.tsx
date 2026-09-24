@@ -9,7 +9,6 @@ import { ANSWER_MS, QUESTION_MS, questionPhase, type Choice } from '../game/rule
 import { API_URL, ApiError, request, setSession } from '../services/api';
 import { clearGameSession, loadGameSession, saveGameSession } from '../services/gameSession';
 import { LiveRound } from './LiveRound';
-import { Archive } from './Archive';
 import { useHome } from '../services/useHome';
 import { GameStage } from './GameStage';
 import { WinnerResult } from './WinnerResult';
@@ -20,7 +19,7 @@ import { SystemChrome } from './SystemChrome';
 import { resultOutcome } from '../game/presentation';
 import { getGamePushInstallationId, requestGamePushRegistration, subscribeToGameNotification } from '../services/gameNotifications';
 
-type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'practice' | 'results';
+type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'results';
 const letters = ['A', 'B', 'C', 'D'];
 const C = { bg: '#E8FF79', panel: '#F7FFD9', border: '#B5C66D', text: '#202020', muted: '#4C5438', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
 function Button({ title, onPress, secondary, disabled }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean }) {
@@ -40,6 +39,8 @@ export function HundoApp() {
   const [restoringSession, setRestoringSession] = useState(Platform.OS !== 'web' && Boolean(API_URL));
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
   const [startedAt, setStartedAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [answers, setAnswers] = useState<Record<number, Choice>>({});
@@ -96,6 +97,12 @@ export function HundoApp() {
     return () => { stopped = true; };
   }, [address]);
   useEffect(() => {
+    if (!menuOpen || !address || !API_URL) return;
+    let active = true;
+    void request<{ gamesPlayed: number }>('profile').then(value => { if (active) setGamesPlayed(value.gamesPlayed); }).catch(() => { if (active) setGamesPlayed(null); });
+    return () => { active = false; };
+  }, [menuOpen, address]);
+  useEffect(() => {
     if (Platform.OS !== 'android') return;
     return subscribeToGameNotification((kind, roundId) => {
       if (kind === 'game-results') {
@@ -119,7 +126,8 @@ export function HundoApp() {
     if (phase.phase === 'final') setScreen('final');
   }, [now, screen, startedAt, phase.phase]);
   function startDemo() {
-    const start = Date.now() + 15000; settled.current.clear(); answerRef.current = {};
+    setMenuOpen(false);
+    const start = Date.now() + 5000; settled.current.clear(); answerRef.current = {};
     setAnswers({}); setEliminatedAt(null); setStartedAt(start); setNow(Date.now()); setScreen('countdown');
   }
   function answer(choice: Choice) {
@@ -171,7 +179,8 @@ export function HundoApp() {
   const demoStage = screen === 'play' || screen === 'countdown';
   const spectator = !alive && !(phase.phase === 'result' && eliminatedAt === phase.index);
   return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onPreviewWinner={()=>{setEliminatedAt(null);setScreen('final');}} onAnswer={value=>answer(value as Choice)} onExit={leave}/>:screen==='results'?<RoundResults roundId={resultsRoundId} onBack={()=>setScreen('lobby')}/>:<ScrollView contentContainerStyle={s.page}>
-    <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable>{screen === 'final' && <Text style={s.pill}>DEMO</Text>}</View>
+    <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={menuOpen ? 'Close menu' : 'Open menu'} onPress={() => setMenuOpen(value => !value)} style={s.menuButton}><Text style={s.menuIcon}>{menuOpen ? '×' : '☰'}</Text></Pressable></View>
+    {menuOpen && <View style={s.menuPanel}><Text style={s.menuHeading}>YOUR ROOM</Text><Text style={s.menuText}>{address ? `Wallet ${address.slice(0, 5)}…${address.slice(-5)} connected · Devnet` : 'Wallet not connected'}</Text><Text style={s.menuText}>{address ? `Games played: ${gamesPlayed === null ? 'Loading…' : gamesPlayed}` : 'Games played: —'}</Text>{API_URL && address && pushEnabled !== null ? <Button title={pushBusy ? 'Updating…' : pushEnabled ? 'Notifications on · Turn off' : 'Notifications off · Turn on'} onPress={() => void setGameReminders(!pushEnabled)} secondary disabled={pushBusy} /> : null}</View>}
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>
         <Text style={s.eyebrow}>{nextRound?.phase === 'live' ? 'GAME IN PROGRESS' : 'NEXT GAME'}</Text>
@@ -186,11 +195,10 @@ export function HundoApp() {
         <View style={s.metricsRow}><Text style={s.rulesMetric}>10 questions</Text><Text style={s.metricsDot}>·</Text><Text style={s.rulesMetric}>15 seconds</Text></View>
       </View>
       <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? nextRound.playerCount === 0 ? 'Be the first in the room' : `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'person' : 'people'} in the room` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
-      {address ? <Text style={s.body}>● Wallet {address.slice(0, 5)}…{address.slice(-5)} connected · Devnet</Text> : <Button title={restoringSession ? 'Restoring wallet…' : busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy || restoringSession} />}
-      {API_URL && address && pushEnabled !== null ? <Button title={pushBusy ? 'Updating reminders…' : pushEnabled ? 'Game reminders on · Turn off' : 'Get game reminders ↗'} onPress={()=>void setGameReminders(!pushEnabled)} secondary disabled={pushBusy} /> : null}
-      {API_URL && address ? <Button title="Join the room ↗" onPress={()=>setLiveOpen(true)}/> : null}
-      <Button title="See how it works ↗" onPress={()=>address&&API_URL?setScreen('practice'):startDemo()} secondary />
-      <Text style={s.footnote}>{address&&API_URL?'Practice on a past crowd':'Practice with a demo crowd'}</Text>
+      {!address && <Button title={restoringSession ? 'Restoring wallet…' : busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy || restoringSession} />}
+      {API_URL && address ? <Button title="Join the room ↗" onPress={()=>{setMenuOpen(false);setLiveOpen(true);}}/> : null}
+      <Button title="See how it works ↗" onPress={startDemo} secondary />
+      <Text style={s.footnote}>Play a quick demo · 5-second countdown</Text>
       {API_URL ? <Button title="See the latest crowd ↗" onPress={()=>{setResultsRoundId(null);setScreen('results');}} secondary /> : null}
     </>}
     {won && <WinnerResult demo onHome={()=>setScreen('lobby')}/>}
@@ -200,9 +208,6 @@ export function HundoApp() {
       <View style={s.spacer} /><Button title="Try again ↗" onPress={startDemo} /><Button title="Back to lobby" onPress={() => setScreen('lobby')} secondary />
     </>}
     {screen === 'final' && <CrowdRecap questions={recap} demo/>}
-    {screen === 'practice' && <>
-      <Text style={s.eyebrow}>BETWEEN GAMES</Text><Text style={s.title}>Read the{'\n'}room.</Text>{API_URL && address ? <Archive /> : <View style={s.card}><Text style={s.stat}>The first game is coming</Text><Text style={s.body}>Connect your wallet to replay past questions with recorded voting results once the first game ends.</Text></View>}<Text style={s.body}>Learn the rules in a demo. Its votes are simulated, not recorded from past games.</Text><View style={s.spacer} /><Button title="Play the demo ↗" onPress={startDemo} /><Button title="Back" onPress={() => setScreen('lobby')} secondary />
-    </>}
     {busy && <ActivityIndicator color={C.lime} style={{ marginTop: 10 }} />}
   </ScrollView>}</SafeAreaView>{API_URL&&address?<LiveRound address={address} open={liveOpen} onClose={()=>setLiveOpen(false)} onTakeOver={()=>setScreen('lobby')} onVisibilityChange={setLiveVisible}/>:null}</View>;
 }
@@ -211,6 +216,7 @@ const s = StyleSheet.create({
   homeHero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 20 }, homeTime: { color: C.text, fontSize: 58, fontWeight: '900', letterSpacing: -2, textAlign: 'center' }, scheduleNote: { color: C.muted, fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 240 }, homePrize: { color: C.purple, fontSize: 76, fontWeight: '900', letterSpacing: -4, textAlign: 'center', width: '100%', marginTop: 18 }, homeUnit: { fontSize: 32, letterSpacing: -1 }, rulesPanel: { backgroundColor: '#FFFFFF55', borderRadius: 24, padding: 22, gap: 18, marginBottom: 6 }, rulesText: { color: C.text, fontSize: 17, lineHeight: 24, textAlign: 'center', fontWeight: '500' }, rulesDivider: { height: 1, backgroundColor: '#20202014' }, rulesMetric: { color: C.muted, fontSize: 13, fontWeight: '600' }, waiting: { color: C.purple, fontSize: 15, fontWeight: '800', textAlign: 'center', marginVertical: 2 },
   prizeCard: { backgroundColor: C.purple, padding: 24, borderRadius: 20, gap: 12, marginVertical: 6 }, prizeLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }, prizeAmount: { color: '#E8FF79', fontSize: 62, fontWeight: '900', letterSpacing: -2 }, prizeUnit: { fontSize: 28, letterSpacing: 0 }, prizeNote: { color: '#FFFFFF', fontSize: 12, lineHeight: 18 },
   safe: { flex: 1, backgroundColor: C.bg }, page: { flexGrow: 1, padding: 24, paddingTop: 12, gap: 14, maxWidth: 600, width: '100%', alignSelf: 'center' },
+  menuButton: { backgroundColor: C.panel, borderRadius: 14, width: 46, height: 42, alignItems: 'center', justifyContent: 'center' }, menuIcon: { color: C.purple, fontSize: 23, fontWeight: '800' }, menuPanel: { backgroundColor: C.panel, borderColor: C.border, borderWidth: 1, borderRadius: 20, padding: 18, gap: 13, marginBottom: 12 }, menuHeading: { color: C.purple, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 }, menuText: { color: C.text, fontSize: 15 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }, wordmark: { color: C.text, fontSize: 38, fontWeight: '900', letterSpacing: -2 }, badge: { flexDirection: 'row', gap: 7, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderRadius: 20, padding: 9 }, dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.lime }, badgeText: { color: C.text, fontSize: 10, fontWeight: '700', letterSpacing: 1 },
   eyebrow: { color: C.muted, fontSize: 11, letterSpacing: 1.7, fontWeight: '700' }, hero: { color: C.text, fontSize: 49, lineHeight: 51, letterSpacing: -2.3, fontWeight: '900' }, title: { color: C.text, fontSize: 42, lineHeight: 46, fontWeight: '800', letterSpacing: -1.5 }, body: { color: C.muted, fontSize: 15, lineHeight: 23 },
   illustration: { flexDirection: 'row', justifyContent: 'center', paddingVertical: 17, height: 175 }, tile: { width: 139, height: 116, borderRadius: 18, padding: 17 }, tileLabel: { fontSize: 9, letterSpacing: 1, color: C.bg, fontWeight: '800' }, tileNumber: { fontSize: 42, color: C.bg, fontWeight: '900', marginTop: 12 }, spacer: { flexGrow: 1, minHeight: 8 },

@@ -26,6 +26,13 @@ type Snapshot = {
 const connection = new Connection('https://api.devnet.solana.com','confirmed');
 const explorer = (kind:string,id:string) => `https://explorer.solana.com/${kind}/${id}?cluster=devnet`;
 const sol = (value:string|number) => (Number(value)/1e9).toLocaleString('en-US',{maximumFractionDigits:9});
+export function formatRoomCountdown(seconds: number): string {
+ const safe = Math.max(0, Math.ceil(seconds));
+ const hours = Math.floor(safe / 3600);
+ const minutes = Math.floor(safe % 3600 / 60);
+ const remainder = safe % 60;
+ return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(remainder).padStart(2, '0')}s`;
+}
 export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{address:string;open:boolean;onClose:()=>void;onTakeOver:()=>void;onVisibilityChange:(visible:boolean)=>void}) {
  const [dismissed,setDismissed]=useState<string|null>(null);
  const [foreground,setForeground]=useState(AppState.currentState!=='background');
@@ -131,7 +138,7 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    {!state?<><Text style={s.title}>No game scheduled yet</Text><Text style={s.body}>The next game will appear here.</Text></>:<>
     <Text style={s.body}>{state.playerCount} joined · {state.survivorCount} still playing</Text>
     {state.phase==='lobby'&&<>
-     <Text style={s.clock}>{Math.floor(remaining/60)}:{(remaining%60).toString().padStart(2,'0')}</Text>
+     <Text style={s.clock}>{formatRoomCountdown(remaining)}</Text>
      <Text style={s.title}>{state.joined?'You’re in!':'Ready to play?'}</Text>
      <Text style={s.body}>{state.joined?'Keep hundo open. The full-screen countdown starts 15 seconds before the game.':state.isRehearsal?'Join with your connected wallet. No transaction or network fee.':'Sign to record your entry on-chain. Your wallet pays a small network fee in test SOL.'}</Text>
      {!state.joined&&<Pressable accessibilityRole="button" style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':state.isRehearsal?'Join rehearsal':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
@@ -154,6 +161,6 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
 }
 const s=StyleSheet.create({
  page:{padding:24,gap:20,flexGrow:1,maxWidth:600,width:'100%',alignSelf:'center'},wordmark:{fontSize:38,fontWeight:'900',letterSpacing:-2,color:'#202020'},
- tag:{color:'#7047EB',fontSize:11,fontWeight:'800',letterSpacing:1},title:{color:'#202020',fontSize:30,fontWeight:'800'},clock:{color:'#7047EB',fontSize:64,fontWeight:'900',fontVariant:['tabular-nums']},
+ tag:{color:'#7047EB',fontSize:11,fontWeight:'800',letterSpacing:1},title:{color:'#202020',fontSize:30,fontWeight:'800'},clock:{color:'#7047EB',fontSize:42,fontWeight:'900',fontVariant:['tabular-nums']},
  body:{color:'#5B5270',fontSize:15,lineHeight:23},error:{color:'#D72C42',fontSize:14},link:{color:'#7047EB',fontSize:15,fontWeight:'700'},button:{backgroundColor:'#7047EB',padding:20,borderRadius:16},buttonText:{fontWeight:'800',color:'#FFFFFF',textAlign:'center',fontSize:16},card:{backgroundColor:'#FFFFFF88',padding:20,borderRadius:16,gap:8},back:{marginTop:'auto',padding:20,alignItems:'center'},
 });
