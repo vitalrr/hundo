@@ -2,7 +2,7 @@
   "expo": {
     "name": "hundo",
     "slug": "hundo",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "orientation": "portrait",
     "icon": "./assets/hundo-icon.png",
     "userInterfaceStyle": "light",
@@ -21,7 +21,7 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "versionCode": 5,
+      "versionCode": 6,
       "allowBackup": false,
       "blockedPermissions": ["android.permission.RECORD_AUDIO"],
       "adaptiveIcon": {

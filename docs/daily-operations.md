@@ -14,7 +14,7 @@ node --experimental-strip-types scripts/prepare-week.ts 2026-09-21T19:00:00Z dis
 
 The timestamp is an example; use the agreed future start. Execute the output once in Supabase SQL Editor. All seven rounds are inserted atomically. Re-running identical SQL does not create duplicates; conflicting content or overlapping games causes a rollback. A local script only generates SQL and never deploys by itself.
 
-This version deliberately schedules zero-prize Devnet rehearsals. It does not send money. The requested home display of 10 000 SKR does not fund these games. Do not represent this as live SKR rewards in the submission.
+This version deliberately schedules zero-prize Devnet rehearsals. It does not send money. The requested home display of 1 000 SKR does not fund these games. Do not represent this as live SKR rewards in the submission.
 
 The schedule covers exactly seven days; it does not generate infinite new questions. Before the last game, review a new 70-question pack and schedule the following week. Do not reuse the first pack silently. Fixed UTC time remains constant across daylight-saving changes; local display times may change.
 

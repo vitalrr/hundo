@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { request } from '../services/api';
 import type { CrowdQuestion } from '../game/crowd';
+import { demoCounts, demoQuestions } from '../game/demo';
 
 type Results = {
   round: { id: string; startsAt: string; playerCount: number; isRehearsal: boolean } | null;
@@ -12,26 +13,39 @@ export function RoundResults({ roundId, onBack }: { roundId: string | null; onBa
   const [data, setData] = useState<Results | null>(null);
   const [error, setError] = useState('');
   const [index, setIndex] = useState(0);
+  const [showExample, setShowExample] = useState(roundId === null);
   useEffect(() => {
+    setShowExample(roundId === null);
+  }, [roundId]);
+  useEffect(() => {
+    if (showExample) return;
     let active = true;
     setData(null); setError(''); setIndex(0);
     void request<Results>('results', roundId ? { roundId } : {}).then(result => {
       if (active) setData(result);
     }).catch(cause => { if (active) setError(cause instanceof Error ? cause.message : 'Could not load the results.'); });
     return () => { active = false; };
-  }, [roundId]);
-  const question = data?.questions[index];
+  }, [roundId, showExample]);
+  const exampleQuestions: CrowdQuestion[] = demoQuestions.map((question, number) => ({
+    number,
+    text: question.text,
+    options: question.options,
+    counts: demoCounts[number],
+  }));
+  const questions = showExample ? exampleQuestions : data?.questions ?? [];
+  const question = questions[index];
   const total = question?.counts.reduce((sum, count) => sum + count, 0) ?? 0;
   const max = question ? Math.max(...question.counts) : 0;
   return <ScrollView contentContainerStyle={s.page}>
     <Text style={s.logo}>hundo<Text style={s.dot}>.</Text></Text>
-    <Text style={s.label}>THE ROOM HAS SPOKEN</Text>
-    <Text style={s.title}>The latest crowd</Text>
-    {error ? <Text style={s.message}>{error}</Text> : !data ? <ActivityIndicator color="#7047EB" /> : !data.round ?
+    <Text style={s.label}>{showExample ? 'EXAMPLE GAME · SIMULATED VOTES' : 'THE ROOM HAS SPOKEN'}</Text>
+    <Text style={s.title}>{showExample ? 'A sample crowd' : 'The latest crowd'}</Text>
+    {showExample && <Text style={s.message}>See a full sample game now. These percentages show how the reveal works; they are not real player votes.</Text>}
+    {error && !showExample ? <Text style={s.message}>{error}</Text> : !showExample && !data ? <ActivityIndicator color="#7047EB" /> : !showExample && !data?.round ?
       <Text style={s.message}>No completed game to show yet. Come back after the round.</Text> : <>
-        <Text style={s.message}>{new Date(data.round.startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {data.round.playerCount} people in the room{data.round.isRehearsal ? ' · recorded rehearsal' : ''}</Text>
+        {!showExample && data?.round && <Text style={s.message}>{new Date(data.round.startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {data.round.playerCount} people in the room{data.round.isRehearsal ? ' · recorded rehearsal' : ''}</Text>}
         {question && <View style={s.card}>
-          <Text style={s.questionNumber}>QUESTION {index + 1} / {data.questions.length}</Text>
+          <Text style={s.questionNumber}>QUESTION {index + 1} / {questions.length}</Text>
           <Text style={s.question}>{question.text}</Text>
           <Text style={s.hint}>What did most players say?</Text>
           {question.options.map((option, optionIndex) => {
@@ -43,9 +57,10 @@ export function RoundResults({ roundId, onBack }: { roundId: string | null; onBa
             </View>;
           })}
         </View>}
-        <View style={s.navigation}><Pressable accessibilityRole="button" disabled={index === 0} onPress={() => setIndex(value => value - 1)} style={[s.navButton, index === 0 && s.disabled]}><Text style={s.navText}>← Previous</Text></Pressable><Pressable accessibilityRole="button" disabled={index >= data.questions.length - 1} onPress={() => setIndex(value => value + 1)} style={[s.navButton, index >= data.questions.length - 1 && s.disabled]}><Text style={s.navText}>Next →</Text></Pressable></View>
-        {data.round.isRehearsal && <Text style={s.message}>Rehearsal results · no prizes were paid.</Text>}
+        <View style={s.navigation}><Pressable accessibilityRole="button" disabled={index === 0} onPress={() => setIndex(value => value - 1)} style={[s.navButton, index === 0 && s.disabled]}><Text style={s.navText}>← Previous</Text></Pressable><Pressable accessibilityRole="button" disabled={index >= questions.length - 1} onPress={() => setIndex(value => value + 1)} style={[s.navButton, index >= questions.length - 1 && s.disabled]}><Text style={s.navText}>Next →</Text></Pressable></View>
+        {!showExample && data?.round?.isRehearsal && <Text style={s.message}>Rehearsal results · no prizes were paid.</Text>}
       </>}
+    {roundId === null && <Pressable accessibilityRole="button" onPress={() => { setIndex(0); setShowExample(value => !value); }} style={s.switchButton}><Text style={s.switchText}>{showExample ? 'See the latest real crowd →' : 'Back to example game →'}</Text></Pressable>}
     <Pressable accessibilityRole="button" onPress={onBack} style={s.back}><Text style={s.backText}>Back to home</Text></Pressable>
   </ScrollView>;
 }
@@ -67,4 +82,5 @@ const s = StyleSheet.create({
   track: { backgroundColor: '#DEE4CE', height: 6, borderRadius: 3, overflow: 'hidden' }, fill: { height: 6, borderRadius: 3 },
   navigation: { flexDirection: 'row', gap: 10 }, navButton: { flex: 1, backgroundColor: '#7047EB', borderRadius: 14, padding: 14 }, disabled: { opacity: 0.35 }, navText: { color: 'white', textAlign: 'center', fontWeight: '800' },
   back: { marginTop: 'auto', padding: 18, backgroundColor: '#7047EB', borderRadius: 16 }, backText: { color: 'white', fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  switchButton: { padding: 18, borderWidth: 1, borderColor: '#7047EB', borderRadius: 16, backgroundColor: '#F7FFD9' }, switchText: { color: '#7047EB', fontSize: 15, fontWeight: '800', textAlign: 'center' },
 });

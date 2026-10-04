@@ -19,7 +19,7 @@ import { SystemChrome } from './SystemChrome';
 import { resultOutcome } from '../game/presentation';
 import { getGamePushInstallationId, requestGamePushRegistration, subscribeToGameNotification } from '../services/gameNotifications';
 
-type Screen = 'welcome' | 'lobby' | 'countdown' | 'play' | 'final' | 'results';
+type Screen = 'welcome' | 'lobby' | 'demo-guide' | 'countdown' | 'play' | 'final' | 'results';
 const letters = ['A', 'B', 'C', 'D'];
 const C = { bg: '#E8FF79', panel: '#F7FFD9', border: '#B5C66D', text: '#202020', muted: '#4C5438', lime: '#7047EB', purple: '#7047EB', danger: '#B52C25' };
 function Button({ title, onPress, secondary, disabled }: { title: string; onPress: () => void; secondary?: boolean; disabled?: boolean }) {
@@ -41,6 +41,7 @@ export function HundoApp() {
   const [pushBusy, setPushBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [gamesPlayed, setGamesPlayed] = useState<number | null>(null);
+  const [guideStep, setGuideStep] = useState(0);
   const [startedAt, setStartedAt] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [answers, setAnswers] = useState<Record<number, Choice>>({});
@@ -130,6 +131,11 @@ export function HundoApp() {
     const start = Date.now() + 5000; settled.current.clear(); answerRef.current = {};
     setAnswers({}); setEliminatedAt(null); setStartedAt(start); setNow(Date.now()); setScreen('countdown');
   }
+  function openDemoGuide() {
+    setMenuOpen(false);
+    setGuideStep(0);
+    setScreen('demo-guide');
+  }
   function answer(choice: Choice) {
     const current = questionPhase(Date.now(), startedAt);
     if (!alive || answerRef.current[phase.index] !== undefined || current.phase !== 'question' || current.index !== phase.index) return;
@@ -178,7 +184,13 @@ export function HundoApp() {
   const won = alive && screen === 'final';
   const demoStage = screen === 'play' || screen === 'countdown';
   const spectator = !alive && !(phase.phase === 'result' && eliminatedAt === phase.index);
-  return <View style={[s.safe,demoStage&&{backgroundColor:spectator?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage?(spectator?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onPreviewWinner={()=>{setEliminatedAt(null);setScreen('final');}} onAnswer={value=>answer(value as Choice)} onExit={leave}/>:screen==='results'?<RoundResults roundId={resultsRoundId} onBack={()=>setScreen('lobby')}/>:<ScrollView contentContainerStyle={s.page}>
+  const guide = [
+    { label: '01 / THE QUESTION', title: 'Predict the crowd.', detail: 'Pick the answer most players will choose. Your own opinion may be different.' },
+    { label: '02 / THE CLOCK', title: 'You have 15 seconds.', detail: 'Tap one of four options before the timer runs out.' },
+    { label: '03 / THE REVEAL', title: 'Stay in or watch.', detail: 'Match the majority to keep playing. Miss it? Stay and see what the room chose.' },
+  ];
+  const showingGuide = screen === 'demo-guide';
+  return <View style={[s.safe,(demoStage||showingGuide)&&{backgroundColor:spectator&&demoStage?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage||showingGuide?(spectator&&demoStage?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{showingGuide?<View style={{flex:1}}><GameStage phase={guideStep===2?'result':'question'} index={0} seconds={guideStep===2?0:15} remainingMs={ANSWER_MS} question={demoQuestions[0]} choice={guideStep===2?0:null} counts={guideStep===2?[...demoCounts[0]]:undefined} leaders={[1]} alive={guideStep!==2} joined outcome={guideStep===2?'out':'correct'} disabled demo tutorial onAnswer={()=>{}} onExit={()=>setScreen('lobby')}/><View style={s.guideScrim}><View style={s.guideCard}><Text style={s.guideLabel}>{guide[guideStep].label}</Text><Text style={s.guideTitle}>{guide[guideStep].title}</Text><Text style={s.guideBody}>{guide[guideStep].detail}</Text><Button title={guideStep===2?'Start demo ↗':'Next ↗'} onPress={()=>guideStep===2?startDemo():setGuideStep(step=>step+1)}/><Pressable accessibilityRole="button" onPress={startDemo}><Text style={s.guideSkip}>Skip tips · Start demo</Text></Pressable></View></View></View>:demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onPreviewWinner={()=>{setEliminatedAt(null);setScreen('final');}} onAnswer={value=>answer(value as Choice)} onExit={leave}/>:screen==='results'?<RoundResults roundId={resultsRoundId} onBack={()=>setScreen('lobby')}/>:<ScrollView contentContainerStyle={s.page}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={menuOpen ? 'Close menu' : 'Open menu'} onPress={() => setMenuOpen(value => !value)} style={s.menuButton}><Text style={s.menuIcon}>{menuOpen ? '×' : '☰'}</Text></Pressable></View>
     {menuOpen && <View style={s.menuPanel}><Text style={s.menuHeading}>YOUR ROOM</Text><Text style={s.menuText}>{address ? `Wallet ${address.slice(0, 5)}…${address.slice(-5)} connected · Devnet` : 'Wallet not connected'}</Text><Text style={s.menuText}>{address ? `Games played: ${gamesPlayed === null ? 'Loading…' : gamesPlayed}` : 'Games played: —'}</Text>{API_URL && address && pushEnabled !== null ? <Button title={pushBusy ? 'Updating…' : pushEnabled ? 'Notifications on · Turn off' : 'Notifications off · Turn on'} onPress={() => void setGameReminders(!pushEnabled)} secondary disabled={pushBusy} /> : null}</View>}
     {(screen === 'welcome' || screen === 'lobby') && <>
@@ -186,20 +198,21 @@ export function HundoApp() {
         <Text style={s.eyebrow}>{nextRound?.phase === 'live' ? 'GAME IN PROGRESS' : 'NEXT GAME'}</Text>
         <Text style={s.homeTime}>{nextRound?.phase === 'live' ? 'LIVE' : startDate ? startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : home.data ? 'SOON' : '—'}</Text>
         <Text style={s.scheduleNote}>{startDate ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · your local time` : home.error || (home.data ? 'The next game will be announced here' : 'Loading the next game…')}</Text>
-        <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>10 000 <Text style={s.homeUnit}>SKR</Text></Text>
-        <Text style={s.daily}>SPLIT BY THOSE WHO READ THE CROWD</Text>
+        <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>1 000 <Text style={s.homeUnit}>SKR</Text></Text>
+        <Text style={s.daily}>PLANNED DAILY PRIZE</Text>
       </View>
       <View style={s.rulesPanel}>
-        <Text style={s.rulesText}>Don't guess the answer. Guess the crowd.</Text>
+        <Text style={s.rulesText}>Can you predict the crowd?</Text>
+        <Text style={s.rulesDetail}>No fixed answers. Pick what most players will choose.</Text>
         <View style={s.rulesDivider} />
         <View style={s.metricsRow}><Text style={s.rulesMetric}>10 questions</Text><Text style={s.metricsDot}>·</Text><Text style={s.rulesMetric}>15 seconds</Text></View>
       </View>
       <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? nextRound.playerCount === 0 ? 'Be the first in the room' : `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'person' : 'people'} in the room` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
       {!address && <Button title={restoringSession ? 'Restoring wallet…' : busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy || restoringSession} />}
       {API_URL && address ? <Button title="Join the room ↗" onPress={()=>{setMenuOpen(false);setLiveOpen(true);}}/> : null}
-      <Button title="See how it works ↗" onPress={startDemo} secondary />
-      <Text style={s.footnote}>Play a quick demo · 5-second countdown</Text>
-      {API_URL ? <Button title="See the latest crowd ↗" onPress={()=>{setResultsRoundId(null);setScreen('results');}} secondary /> : null}
+      <Button title="See how it works ↗" onPress={openDemoGuide} secondary />
+      <Text style={s.footnote}>Three quick tips, then a playable demo</Text>
+      {API_URL && address ? <Button title="See the latest crowd ↗" onPress={()=>{setResultsRoundId(null);setScreen('results');}} secondary /> : null}
     </>}
     {won && <WinnerResult demo onHome={()=>setScreen('lobby')}/>}
     {screen === 'final' && !won && <>
@@ -212,8 +225,14 @@ export function HundoApp() {
   </ScrollView>}</SafeAreaView>{API_URL&&address?<LiveRound address={address} open={liveOpen} onClose={()=>setLiveOpen(false)} onTakeOver={()=>setScreen('lobby')} onVisibilityChange={setLiveVisible}/>:null}</View>;
 }
 const s = StyleSheet.create({
+  guideScrim: { ...StyleSheet.absoluteFillObject, backgroundColor:'#24134288', justifyContent:'flex-end', padding:22 },
+  guideCard: { backgroundColor:'#F7FFD9', borderRadius:24, padding:22, gap:15, borderWidth:2, borderColor:'#7047EB' },
+  guideLabel: { color:'#7047EB', fontSize:11, fontWeight:'900', letterSpacing:1.4 },
+  guideTitle: { color:'#202020', fontSize:27, fontWeight:'900' },
+  guideBody: { color:'#4C5438', fontSize:16, lineHeight:23 },
+  guideSkip: { color:'#7047EB', fontSize:13, fontWeight:'700', textAlign:'center', padding:8 },
   daily: {color:C.purple,fontSize:10,fontWeight:'800',letterSpacing:1,textAlign:'center',lineHeight:15,marginTop:-4}, metricsRow:{flexDirection:'row',justifyContent:'center',alignItems:'center',gap:16,flexWrap:'wrap'}, metricsDot:{color:C.purple,fontSize:25,fontWeight:'900'},
-  homeHero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 20 }, homeTime: { color: C.text, fontSize: 58, fontWeight: '900', letterSpacing: -2, textAlign: 'center' }, scheduleNote: { color: C.muted, fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 240 }, homePrize: { color: C.purple, fontSize: 76, fontWeight: '900', letterSpacing: -4, textAlign: 'center', width: '100%', marginTop: 18 }, homeUnit: { fontSize: 32, letterSpacing: -1 }, rulesPanel: { backgroundColor: '#FFFFFF55', borderRadius: 24, padding: 22, gap: 18, marginBottom: 6 }, rulesText: { color: C.text, fontSize: 17, lineHeight: 24, textAlign: 'center', fontWeight: '500' }, rulesDivider: { height: 1, backgroundColor: '#20202014' }, rulesMetric: { color: C.muted, fontSize: 13, fontWeight: '600' }, waiting: { color: C.purple, fontSize: 15, fontWeight: '800', textAlign: 'center', marginVertical: 2 },
+  homeHero: { alignItems: 'center', gap: 10, paddingTop: 8, paddingBottom: 20 }, homeTime: { color: C.text, fontSize: 58, fontWeight: '900', letterSpacing: -2, textAlign: 'center' }, scheduleNote: { color: C.muted, fontSize: 11, lineHeight: 16, textAlign: 'center', maxWidth: 240 }, homePrize: { color: C.purple, fontSize: 76, fontWeight: '900', letterSpacing: -4, textAlign: 'center', width: '100%', marginTop: 18 }, homeUnit: { fontSize: 32, letterSpacing: -1 }, rulesPanel: { backgroundColor: '#FFFFFF55', borderRadius: 24, padding: 22, gap: 10, marginBottom: 6 }, rulesText: { color: C.text, fontSize: 21, lineHeight: 27, textAlign: 'center', fontWeight: '800' }, rulesDetail: { color:C.muted, fontSize:13, lineHeight:19, textAlign:'center' }, rulesDivider: { height: 1, backgroundColor: '#20202014', marginTop:8 }, rulesMetric: { color: C.muted, fontSize: 13, fontWeight: '600' }, waiting: { color: C.purple, fontSize: 15, fontWeight: '800', textAlign: 'center', marginVertical: 2 },
   prizeCard: { backgroundColor: C.purple, padding: 24, borderRadius: 20, gap: 12, marginVertical: 6 }, prizeLabel: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', letterSpacing: 1.5 }, prizeAmount: { color: '#E8FF79', fontSize: 62, fontWeight: '900', letterSpacing: -2 }, prizeUnit: { fontSize: 28, letterSpacing: 0 }, prizeNote: { color: '#FFFFFF', fontSize: 12, lineHeight: 18 },
   safe: { flex: 1, backgroundColor: C.bg }, page: { flexGrow: 1, padding: 24, paddingTop: 12, gap: 14, maxWidth: 600, width: '100%', alignSelf: 'center' },
   menuButton: { backgroundColor: C.panel, borderRadius: 14, width: 46, height: 42, alignItems: 'center', justifyContent: 'center' }, menuIcon: { color: C.purple, fontSize: 23, fontWeight: '800' }, menuPanel: { backgroundColor: C.panel, borderColor: C.border, borderWidth: 1, borderRadius: 20, padding: 18, gap: 13, marginBottom: 12 }, menuHeading: { color: C.purple, fontSize: 11, fontWeight: '800', letterSpacing: 1.4 }, menuText: { color: C.text, fontSize: 15 },

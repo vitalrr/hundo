@@ -31,6 +31,7 @@ export function prepareWeek(firstStart: string, source: string, now=Date.now()) 
  return `begin;\nlock table public.hundo_rounds in share row exclusive mode;\ndo $$\ndeclare existing uuid;\nbegin\n${blocks.join('\n')}\nend $$;\ncommit;\nselect id,starts_at,is_rehearsal from public.hundo_rounds where starts_at in (${starts.map(q).join(',')}) order by starts_at;\n`;
 }
 if(process.argv[1]?.endsWith('/prepare-week.ts')){
- const sql=prepareWeek(process.argv[2]??'',readFileSync(resolve(dirname(process.argv[1]),'../content/week-one.tsv'),'utf8'));
+ const sourcePath=process.argv[4]??resolve(dirname(process.argv[1]),'../content/week-one.tsv');
+ const sql=prepareWeek(process.argv[2]??'',readFileSync(sourcePath,'utf8'));
  if(process.argv[3])writeFileSync(process.argv[3],sql);else process.stdout.write(sql);
 }

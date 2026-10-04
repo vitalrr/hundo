@@ -12,7 +12,7 @@ The game opens a full-screen countdown, keeps choices hidden until the deadline,
 An installable Android APK includes an offline demo and native Mobile Wallet Adapter login with a server-verified challenge signature. Supabase controls round timing, eligible voting, ties and settlement. A Seeker and a simulated Mac client completed one shared ten-question round with two votes per question and two finalists. The user also verified follow-up timer, tap feedback, audio and screen-inset fixes on Seeker.
 
 ## Solana's role and current limits
-Wallet identity is implemented. Ordinary game entry has an on-chain memo verification path, while zero-prize rehearsals use the authenticated wallet session. The app contains public-wallet and confirmed-transaction links. Prize accounting uses Devnet SOL, and an executed prize transfer has not yet been verified. Automated payouts, real SKR distribution, mainnet readiness and production bot protection remain unfinished. The 10 000 SKR home banner and 500 SKR winner preview are presentation examples, not evidence of funded rewards. There is no Anchor escrow program.
+Wallet identity is implemented. Ordinary game entry has an on-chain memo verification path, while zero-prize rehearsals use the authenticated wallet session. The app contains public-wallet and confirmed-transaction links. Prize accounting uses Devnet SOL, and an executed prize transfer has not yet been verified. Automated payouts, real SKR distribution, mainnet readiness and production bot protection remain unfinished. The 1 000 SKR home banner and 50 SKR winner preview are presentation examples, not evidence of funded rewards. There is no Anchor escrow program.
 
 ## Official checklist
 Source: https://solanamobile.com/blog/clock-in-the-solana-mobile-hackathon (checked September 20, 2026).
@@ -34,7 +34,7 @@ The announcement requests an Android APK, GitHub source, a demo video and a pitc
 
 45–60 seconds: Show vote percentages and advancement. “The most popular option wins. Only active players vote. Tied leading options all advance.”
 
-60–75 seconds: Cut to the final question and winner screen from a real rehearsal. Label edits and any demo preview clearly. Do not present the example 500 SKR as an actual transfer.
+60–75 seconds: Cut to the final question and winner screen from a real rehearsal. Label edits and any demo preview clearly. Do not present the example 50 SKR as an actual transfer.
 
 75–90 seconds: Show tomorrow's schedule. “The game loop works on Seeker. Next we are validating prize transfers and preparing for larger rooms.” Close with the repository URL and hundo branding.
 

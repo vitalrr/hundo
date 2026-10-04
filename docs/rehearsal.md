@@ -2,7 +2,7 @@
 
 The home screen polls `home` every five seconds while visible. The endpoint is public through the existing publishable-key gateway; it returns the earliest ready upcoming/active round, server time and the number of unique registered wallets. It never returns questions, answers or player addresses. This is a registration count, not online presence. The date/time uses the phone's timezone. Missing schedules and connection failures have separate states.
 
-**10 000 SKR remains a presentation placeholder at the owner's request.** It is not a funded on-chain prize. The current backend remains Devnet/SOL. Actual SKR payouts are not implemented.
+**1 000 SKR remains a presentation placeholder as an approved planned-prize mockup.** It is not a funded on-chain prize. The current backend remains Devnet/SOL. Actual SKR payouts are not implemented.
 
 Apply migrations in order. `202609190001_home.sql` and the updated `game` function were deployed to the hundo Supabase project on September 19, 2026. Public home/CORS and authenticated login smoke checks passed against that deployment. Ten local tests passed; these do not substitute for testing simultaneous physical devices.
 
