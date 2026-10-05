@@ -2,15 +2,15 @@ import type { Question } from './rules';
 
 // Synthetic fixtures, never presented as historical player data.
 export const demoQuestions: Question[] = [
-  { id: '1', text: 'What do you tell yourself before aping in?', options: ['I did my research', 'Just a little', 'I’m early this time', 'It’s an investment'] },
-  { id: '2', text: 'The chart dumps. First message in the chat?', options: ['Buying the dip', 'Devs, where are you?', 'Healthy correction', 'I’m out'] },
-  { id: '3', text: 'Who’s easiest to blame for a loss?', options: ['Whales', 'An influencer', 'Myself', 'Mercury retrograde'] },
-  { id: '4', text: 'What’s worst to miss?', options: ['Airdrop', 'The perfect entry', 'Taking profit', 'A big announcement'] },
-  { id: '5', text: 'Your token does a 2×. First thought?', options: ['Take profits', 'Should’ve bought more', 'Just getting started', 'Screenshot time'] },
-  { id: '6', text: 'Which tab is always open?', options: ['The chart', 'X', 'Telegram', 'Wallet'] },
-  { id: '7', text: 'What does “I’m here long term” mean?', options: ['I believe in the team', 'Missed the exit', 'Forgot my password', 'Waiting for the next cycle'] },
-  { id: '8', text: 'Which signal feels most convincing?', options: ['Friends bought in', 'A nice website', 'High volume', 'Nobody knows yet'] },
-  { id: '9', text: 'What do you check first in the morning?', options: ['My balance', 'SOL price', 'Notifications', 'The time'] },
-  { id: '10', text: 'What matters most in crypto?', options: ['Patience', 'Luck', 'A good group chat', 'Knowing when to exit'] },
+  { id: '1', text: 'If the room could follow one market right now, which would most watch?', options: ['BTC', 'SOL', 'ETH', 'New tokens'] },
+  { id: '2', text: 'If SOL falls 10% in a day, what will most players do?', options: ['Buy more', 'Hold', 'Sell some', 'Wait for news'] },
+  { id: '3', text: 'What worries the room most this week?', options: ['Price drop', 'Scam links', 'Missing a rally', 'New rules'] },
+  { id: '4', text: 'Which signal would most trust before buying?', options: ['Price trend', 'Product users', 'A friend’s pick', 'Big-wallet moves'] },
+  { id: '5', text: 'If the market rises fast, what will most do first?', options: ['Take profit', 'Buy more', 'Hold', 'Ask why'] },
+  { id: '6', text: 'Where would the room move money after a big gain?', options: ['Stablecoins', 'BTC', 'SOL', 'Cash'] },
+  { id: '7', text: 'How long will most wait before their next trade?', options: ['Today', 'This week', 'After a dip', 'No plan'] },
+  { id: '8', text: 'What could change the room’s mood fastest?', options: ['Big hack', 'Price breakout', 'New app launch', 'Clear rules'] },
+  { id: '9', text: 'What will most expect from SOL next week?', options: ['Rise', 'Fall', 'Stay flat', 'Hard to say'] },
+  { id: '10', text: 'Which word fits the room right now?', options: ['Buy', 'Hold', 'Sell', 'Wait'] },
 ];
-export const demoCounts = [[32, 48, 13, 7], [44, 12, 30, 14], [36, 29, 25, 10], [41, 28, 24, 7], [18, 46, 26, 10], [20, 24, 45, 11], [15, 59, 4, 22], [34, 8, 27, 31], [32, 39, 21, 8], [24, 19, 16, 41]];
+export const demoCounts = [[28, 46, 15, 11], [35, 42, 8, 15], [38, 22, 28, 12], [24, 36, 17, 23], [32, 18, 41, 9], [29, 27, 35, 9], [23, 31, 39, 7], [20, 45, 25, 10], [40, 12, 23, 25], [24, 32, 8, 36]];
