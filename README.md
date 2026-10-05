@@ -41,7 +41,7 @@ The preview uses test signing. Prepare a separate signing key and release identi
 
 Apply the SQL migrations in `supabase/migrations` in order, then deploy `supabase/functions/game/index.ts` and `supabase/functions/notify/index.ts`. The game function uses Supabase-provided service credentials, verifies wallet sessions and talks to Devnet through `SOLANA_RPC_URL`. The client supplies the public gateway key in `apikey` and `Authorization`. Tables and game RPCs remain restricted to the service role; completed aggregate results have a read-only public endpoint.
 
-[Daily operations](docs/daily-operations.md) covers a seven-day schedule, 70 English questions, duplicate protection and weekly content renewal. The operator creates complete future rounds in one transaction. No laptop cron process is required. Server requests advance settlement when needed.
+[Daily operations](docs/daily-operations.md) covers a seven-day schedule, 70 English questions, duplicate protection and weekly content renewal. The [question guide](docs/question-guidelines.md) defines the editorial brief without exposing future rounds. The operator creates complete future rounds in one transaction. No laptop cron process is required. Server requests advance settlement when needed.
 
 ## Before a public release
 
