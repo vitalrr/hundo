@@ -2,6 +2,10 @@
 
 A daily live game of collective instinct for Solana Seeker. Pick the answer you think the other active players will choose. Their votes determine the winning option when the timer closes.
 
+## Install the CLOCK IN build
+
+[Download the Android APK (v0.2.5)](https://github.com/vitalrr/hundo/releases/download/v0.2.5/hundo-0.2.5.apk). The release page includes the build notes. This is a test-signed competition build, not a Solana dApp Store release.
+
 ## Play
 
 Connect a wallet with Mobile Wallet Adapter, join before the scheduled start and answer ten questions. Each question gives you fifteen seconds, followed by a five-second result reveal without a countdown. Players who pick a leading option advance. Tied leaders all advance, a missed answer eliminates, and spectators cannot vote. The server controls deadlines and settlement.
@@ -14,7 +18,7 @@ The Android APK has been tested on a physical Seeker. In the September 20 shared
 
 Wallet challenge authentication works. The code also contains ordinary-game memo transaction verification, public prize-wallet balance display, server-side prize accounting and Explorer links. **Actual prize transfers have not yet been verified, and this version has no automatic payout executor.** Current game accounting uses Devnet SOL. The 1 000 SKR home display and demo prize amounts are presentation examples, not funded reward claims. No Anchor escrow or completed SKR integration is present.
 
-The weekly schedule runs free, zero-prize rehearsals. Future live question packs must remain private. Publishing this repository and its history without first rotating unreleased packs would expose their content.
+The October 7–21 schedule runs free, zero-prize rehearsals. `content/week-one.tsv` is an archived September 21–27 pack; current and future live question packs are stored outside this public repository and are not bundled in the APK.
 
 ## Run locally
 

@@ -4,7 +4,7 @@ Deployed September 20, 2026: September 21–27, inclusive, each at 19:00 UTC. Su
 
 The server stores each start time and all ten questions in advance. No Mac process or browser tab needs to stay open. Clients display their local time and follow server phase/answer deadlines. Settlement occurs when clients request the round state, not through a timer on the operator's laptop.
 
-`content/week-one.tsv` contains 70 original English prompts in seven sets of ten. Each asks players to predict the other active players; none has a predetermined correct choice. Themes: community habits, phone life, group chats, decision-making, games, building products, and daily rituals. Keep unreleased questions private: they are not bundled in the APK. Before opening the repository publicly, replace future live packs with privately stored content.
+`content/week-one.tsv` contains 70 original English prompts from the completed September 21–27 schedule. Each asks players to predict the other active players; none has a predetermined correct choice. Themes: community habits, phone life, group chats, decision-making, games, building products, and daily rituals. The October 7–21 packs are stored privately outside this public repository; unreleased questions are not bundled in the APK.
 
 Generate a seven-day schedule at a fixed UTC hour:
 

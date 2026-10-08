@@ -15,13 +15,13 @@ An installable Android APK includes an offline demo and native Mobile Wallet Ada
 Wallet identity is implemented. Ordinary game entry has an on-chain memo verification path, while zero-prize rehearsals use the authenticated wallet session. The app contains public-wallet and confirmed-transaction links. Prize accounting uses Devnet SOL, and an executed prize transfer has not yet been verified. Automated payouts, real SKR distribution, mainnet readiness and production bot protection remain unfinished. The 1 000 SKR home banner and 50 SKR winner preview are presentation examples, not evidence of funded rewards. There is no Anchor escrow program.
 
 ## Official checklist
-Source: https://solanamobile.com/blog/clock-in-the-solana-mobile-hackathon (checked September 20, 2026).
+Sources: https://solanamobile.com/blog/clock-in-the-solana-mobile-hackathon and https://solanamobile.radiant.nexus/ (checked October 7, 2026).
 
-The announcement requests an Android APK, GitHub source, a demo video and a pitch deck or short presentation by October 8, 2026. It does not specify a closing hour there. Verify the submission portal's precise cutoff before submitting. Winners must later publish on the Solana dApp Store to claim prizes. SKR integration is optional and has a separate prize; hundo must not claim a completed SKR integration at this stage.
+The announcement requests an Android APK, GitHub source, a demo video and a pitch deck or short presentation by October 8, 2026. The current submission portal instead shows October 12, 2026 at 12:59 GMT+1. Because these official dates conflict, submit by October 8 if possible. Winners must later publish on the Solana dApp Store to claim prizes. SKR integration is optional and has a separate prize; hundo must not claim a completed SKR integration at this stage.
 
-- APK: working ARM64 preview, currently test-signed. Create an identifiable final release and preserve its checksum before submission.
-- Source: https://github.com/vitalrr/hundo. Confirm judges can access the private repository. Do not change visibility until unreleased question packs and repository history have been reviewed.
-- Video: script below is ready; a final recording still needs to be captured on Seeker.
+- APK: working ARM64 preview, test-signed; downloadable at https://github.com/vitalrr/hundo/releases/download/v0.2.5/hundo-0.2.5.apk. SHA-256: `9c42037cac34d622e9915ef5c68331136d0a1db9ea0fd84096959fdaee5dced3`.
+- Source: https://github.com/vitalrr/hundo is public. The October question packs are stored outside the repository.
+- Video: the creator reports that a final recording has been made; upload it to the submission portal.
 - Presentation: the six-slide content below is ready for layout and export.
 - Submission: not sent. Final review and submission remain separate steps.
 
