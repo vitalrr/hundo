@@ -12,4 +12,6 @@ overrides:
   "tar@6.2.1": 7.5.22
 patchedDependencies:
   '@expo/cli@0.22.28': patches/@expo__cli@0.22.28.patch
+  braces@3.0.3: patches/braces@3.0.3.patch
   metro@0.81.5: patches/metro@0.81.5.patch
+  node-forge@1.4.0: patches/node-forge@1.4.0.patch
