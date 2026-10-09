@@ -4,7 +4,7 @@
 
 ## Install and see it work
 
-**[Download the Android APK (v0.2.5)](https://github.com/vitalrr/hundo/releases/download/v0.2.5/hundo-0.2.5.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.5) · [Recorded two-player rehearsal](docs/rehearsal.md)
+**[Download the Android APK (v0.2.6)](https://github.com/vitalrr/hundo/releases/download/v0.2.6/hundo-0.2.6.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.6) · [Recorded two-player rehearsal](docs/rehearsal.md)
 
 The APK is a test-signed competition build. It installs directly on a compatible Android phone; the phone does not need to share Wi-Fi with the developer's Mac. The offline **See how it works** demo can be explored without a wallet. A live room requires internet and an Android wallet that supports Solana Mobile Wallet Adapter. The physical-device test used a Solana Seeker.
 
@@ -80,4 +80,4 @@ Apply [migrations](supabase/migrations) in filename order, then deploy the [game
 
 In a [September 20 rehearsal](docs/rehearsal.md), one physical Seeker and one explicitly simulated Mac player submitted answers to all ten questions. The server returned two votes per reveal and two finalists. The Seeker user confirmed the game flow worked. This demonstrates a two-player live round, **not** production-scale load or a two-phone test. Automated rules and database checks run with `pnpm test`.
 
-The [competition submission notes](docs/submission.md) describe the product and demo material. They are supporting documentation, not evidence that a payout was sent or that a store release is available.
+The [competition submission notes](docs/submission.md) describe the product and demo material. The [security audit follow-up](docs/security-audit.md) records fixed and remaining dependency findings. These are supporting documents, not evidence that a payout was sent or that a store release is available.

@@ -1,5 +1,15 @@
 allowBuilds:
-  bigint-buffer: false
   bufferutil: false
   utf-8-validate: false
 nodeLinker: hoisted
+overrides:
+  "@xmldom/xmldom@0.7.13": 0.8.15
+  "ajv@8.11.0": 8.20.0
+  "image-size@1.2.1": 2.0.4
+  "postcss@8.4.49": 8.5.29
+  "shell-quote@1.10.0": 1.12.0
+  "source-map-js@1.2.1": 1.2.2
+  "tar@6.2.1": 7.5.22
+patchedDependencies:
+  '@expo/cli@0.22.28': patches/@expo__cli@0.22.28.patch
+  metro@0.81.5: patches/metro@0.81.5.patch
