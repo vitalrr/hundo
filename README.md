@@ -1,56 +1,83 @@
 # hundo.
 
-A daily live game of collective instinct for Solana Seeker. Pick the answer you think the other active players will choose. Their votes determine the winning option when the timer closes.
+**Can you predict the crowd?** Hundo is a daily, live Android game for Solana Mobile. Ten questions ask what the crypto community thinks *right now*. There is no answer key: players choose the option they believe most other active players will choose, and the server determines the majority only after each timer closes. Survivors reach the final; everyone can see the crowd's answers afterward.
 
-## Install the CLOCK IN build
+## Install and see it work
 
-[Download the Android APK (v0.2.5)](https://github.com/vitalrr/hundo/releases/download/v0.2.5/hundo-0.2.5.apk). The release page includes the build notes. This is a test-signed competition build, not a Solana dApp Store release.
+**[Download the Android APK (v0.2.5)](https://github.com/vitalrr/hundo/releases/download/v0.2.5/hundo-0.2.5.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.5) · [Recorded two-player rehearsal](docs/rehearsal.md)
 
-## Play
+The APK is a test-signed competition build. It installs directly on a compatible Android phone; the phone does not need to share Wi-Fi with the developer's Mac. The offline **See how it works** demo can be explored without a wallet. A live room requires internet and an Android wallet that supports Solana Mobile Wallet Adapter. The physical-device test used a Solana Seeker.
 
-Connect a wallet with Mobile Wallet Adapter, join before the scheduled start and answer ten questions. Each question gives you fifteen seconds, followed by a five-second result reveal without a countdown. Players who pick a leading option advance. Tied leaders all advance, a missed answer eliminates, and spectators cannot vote. The server controls deadlines and settlement.
+The scheduled rounds in the current competition build are **free, zero-prize rehearsals**. The **1,000 SKR** figure on the home screen is a clearly labeled *planned daily prize* example, not a funded pool or an offer of a current payout. The game runs at **19:00 UTC** when a round is scheduled; each phone displays that time locally.
 
-The app includes an offline demo with three quick explanations, a 5-second demo countdown and 15-second live countdown with music, live percentage reveals, spectator mode and a winner screen. The daily schedule uses **19:00 UTC** and displays local time on each phone. Opt-in Android push reminders are scheduled 15 and 5 minutes before a complete round; a post-game push links to the public aggregate recap after a completed round with participants, including rehearsals. After connecting a wallet, players can open a clearly labeled simulated example game immediately and switch to the latest recorded crowd result.
+## How a round works
 
-## Verified prototype
+1. Connect a wallet, join the room, and wait for the synchronized start.
+2. Answer each of ten questions within **15 seconds**. Answers stay hidden from other players until the timer closes.
+3. See the vote split for **5 seconds**. Every option tied for the lead counts as a winning answer. Players who miss or choose another option become spectators.
+4. Finalists see the result; all players can inspect the ten-question crowd recap. Push reminders can be enabled for 15 and 5 minutes before a round, plus a recap notification afterward.
 
-The Android APK has been tested on a physical Seeker. In the September 20 shared rehearsal, a Seeker and a simulated Mac client submitted two votes on every question and both reached the final. The user subsequently verified timer, response feedback and full-screen fixes on Seeker. This is not evidence of production-scale capacity. See [rehearsal evidence](docs/rehearsal.md).
+The **server**, not the phone clock, accepts answers and settles each question. A configurable survivor cap can use server receipt time to break a large group of surviving players; network latency therefore affects a speed cutoff.
 
-Wallet challenge authentication works. The code also contains ordinary-game memo transaction verification, public prize-wallet balance display, server-side prize accounting and Explorer links. **Actual prize transfers have not yet been verified, and this version has no automatic payout executor.** Current game accounting uses Devnet SOL. The 1 000 SKR home display and demo prize amounts are presentation examples, not funded reward claims. No Anchor escrow or completed SKR integration is present.
+## Architecture and source map
 
-The October 7–21 schedule runs free, zero-prize rehearsals. `content/week-one.tsv` is an archived September 21–27 pack; current and future live question packs are stored outside this public repository and are not bundled in the APK.
+| Part | What to inspect |
+| --- | --- |
+| Android app | [App entry](App.tsx), [home and demo](src/features/HundoApp.tsx), [live controller](src/features/LiveRound.tsx), [question and result presentation](src/features/GameStage.tsx) |
+| Wallet and session | [Mobile Wallet Adapter](src/utils/useMobileWallet.tsx), [secure local session](src/services/gameSession.ts) |
+| Game API | [Supabase Edge Function](supabase/functions/game/index.ts): challenge login, joins, answers, snapshots, public aggregate recap |
+| Majority and rewards | [Latest settlement rules](supabase/migrations/202609220004_five_second_results.sql), with the schema and earlier changes in [SQL migrations](supabase/migrations) |
+| Notifications | [FCM sender](supabase/functions/notify/index.ts), [setup and delivery notes](docs/push-setup.md) |
+| Checks and evidence | [Rules tests](tests/rules.test.ts), [database tests](tests/database.test.ts), [recorded rehearsal](docs/rehearsal.md) |
 
-## Run locally
+The client is React Native/Expo, based on the official Solana Mobile Expo template. Supabase Postgres stores rounds, questions, players, answers and accounting records; its Edge Functions serve the client and send notifications. Solana Devnet is used for wallet entry verification in ordinary non-rehearsal rounds. Android's `android/` folder is generated by Expo prebuild and deliberately not committed; the app source, configuration, build script, database migrations and server functions are in this repository.
 
-Use Node 24, pnpm, JDK 17 and Android SDK. The project began from the official `solana-mobile/solana-mobile-expo-template`, revision `04cdd54bc3a9234b518412c51b0d6c5f1d32dc29`.
+## Solana wallet integration
+
+The [Android wallet adapter](src/utils/useMobileWallet.tsx) opens a wallet session. The app asks the wallet to sign a one-time server challenge; the [game API](supabase/functions/game/index.ts) verifies the Ed25519 signature against the wallet address and issues a session token. The token is kept in Android SecureStore and the server session lasts up to 30 days, renewing when used near expiry. Signing in does **not** transfer funds.
+
+For an **ordinary non-rehearsal round**, joining sends a Solana Devnet Memo transaction containing the round ID. The server verifies that the finalized transaction was signed by the logged-in wallet and contains the expected memo before registering entry. The current **zero-prize rehearsals** use the signed wallet session to join without an entry transaction or network fee. This distinction is visible in the [live controller](src/features/LiveRound.tsx) and [join API](supabase/functions/game/index.ts).
+
+## Majority calculation
+
+The [Postgres settlement function](supabase/migrations/202609220004_five_second_results.sql) locks the round while settling. Only a player still active in that round can submit one choice per question before the server's 15-second deadline. After closing, the server counts the four choices, publishes their totals, advances everyone who selected an option tied for the highest positive count, and eliminates players with no accepted winning answer. A five-second reveal follows before the next question. After question ten, the server records the finalists and, if a nonzero pool was configured, computes each finalist's share in whole lamports.
+
+The [game API](supabase/functions/game/index.ts) exposes the settled percentages and final crowd recap. Question and answer data are server-side; the current and future live question packs are not bundled in the APK. The checked-in [September sample pack](content/week-one.tsv) is archived material, not the current schedule.
+
+## Reward flow and current limits
+
+The intended flow is a public prize pool, server-calculated finalist shares, and verifiable wallet transfers with Explorer links. **That transfer flow is not complete in this build.** The current database models Devnet **SOL** amounts and creates `hundo_payouts` accounting rows; it has **no automatic payout executor**, no verified real prize transfer, no funded on-chain escrow, and no SKR token payout integration. The displayed 1,000 SKR amount is a presentation example. Rehearsal rounds have a zero actual pool and send no rewards. Please judge the wallet login and live majority game as implemented, and the reward distribution as planned work.
+
+The operator currently controls any prize wallet. A wallet address is not proof of one unique human, and production use still requires bot resistance, payout verification, larger-room testing and monitoring.
+
+## Build from source
+
+Use **Node 24**, **pnpm**, **JDK 17**, and the **Android SDK**. Clone this repository, then:
 
 ```sh
 pnpm install
+cp .env.example .env
 pnpm typecheck
 pnpm test
-pnpm android
 ```
 
-Mobile Wallet Adapter requires a native Android build. Expo Go and the web demo do not support wallet login. Set the public configuration from `.env.example` in a local `.env`. Never add service-role or signing keys to the client.
+For live features, put the public Supabase game endpoint and publishable key into `.env` as `EXPO_PUBLIC_GAME_API_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. An empty endpoint leaves the standalone demo available. Do not place a Supabase service-role key, Firebase service-account key, or notification scheduler secret in the app or in Git.
 
-For an embedded ARM64 preview APK with `JAVA_HOME` and `ANDROID_HOME` configured:
+The native build also needs `google-services.json` for the Android package `app.hundo.mobile`. It is intentionally excluded from Git and must be downloaded from the Firebase Android app settings before building; see [push setup](docs/push-setup.md). **The source checkout cannot produce an identical push-enabled APK without that Firebase configuration.** The linked, prebuilt APK already includes the client configuration.
+
+With `JAVA_HOME` set to JDK 17 and `ANDROID_HOME` set to the Android SDK, either run `pnpm android` for development or build the test-signed ARM64 APK:
 
 ```sh
 pnpm build:local
+# output: dist/hundo-preview.apk
 ```
 
-The preview uses test signing. Prepare a separate signing key and release identity for store publication. The installed APK does not need a running Mac, but wallet login and live rounds need internet.
+The [build script](scripts/build-preview.sh) generates `android/` using Expo prebuild and assembles the native release variant. A store release needs its own signing and publication setup; this APK is for testing and judging.
 
-## Backend and daily operations
+## Backend and evidence
 
-Apply the SQL migrations in `supabase/migrations` in order, then deploy `supabase/functions/game/index.ts` and `supabase/functions/notify/index.ts`. The game function uses Supabase-provided service credentials, verifies wallet sessions and talks to Devnet through `SOLANA_RPC_URL`. The client supplies the public gateway key in `apikey` and `Authorization`. Tables and game RPCs remain restricted to the service role; completed aggregate results have a read-only public endpoint.
+Apply [migrations](supabase/migrations) in filename order, then deploy the [game](supabase/functions/game/index.ts) and [notification](supabase/functions/notify/index.ts) Edge Functions. The backend uses server-only Supabase credentials and `SOLANA_RPC_URL`; scheduled push sending uses server-only Firebase credentials. [Daily operations](docs/daily-operations.md) and the [question-writing guide](docs/question-guidelines.md) document scheduling and content rules.
 
-[Daily operations](docs/daily-operations.md) covers a seven-day schedule, 70 English questions, duplicate protection and weekly content renewal. The [question guide](docs/question-guidelines.md) defines the editorial brief without exposing future rounds. The operator creates complete future rounds in one transaction. No laptop cron process is required. Server requests advance settlement when needed.
+In a [September 20 rehearsal](docs/rehearsal.md), one physical Seeker and one explicitly simulated Mac player submitted answers to all ten questions. The server returned two votes per reveal and two finalists. The Seeker user confirmed the game flow worked. This demonstrates a two-player live round, **not** production-scale load or a two-phone test. Automated rules and database checks run with `pnpm test`.
 
-## Before a public release
-
-Complete transfer verification and an idempotent payout executor, test reconnection and larger rooms, address bot participation, add monitoring and establish production reward operations. One wallet is not proof of one human. Speed-cutoff decisions use server receipt time and therefore include network latency. The operator controls any prize wallet, not an escrow contract.
-
-## CLOCK IN
-
-[Submission draft](docs/submission.md) contains the English product description, official deliverable checklist, a 90-second video script and six-slide presentation content. The official announcement lists October 8, 2026 as the deadline. A final recording, presentation export, release checklist and submission are still pending.
+The [competition submission notes](docs/submission.md) describe the product and demo material. They are supporting documentation, not evidence that a payout was sent or that a store release is available.
