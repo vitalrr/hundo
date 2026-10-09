@@ -5,6 +5,7 @@ import { API_URL, request } from './api';
 export type HomeRound = {
   id: string; startsAt: string; phase: 'lobby' | 'live';
   playerCount: number; isRehearsal: boolean;
+  skrPilot?: { treasury: string; mint: string; amountRaw: string; status: string } | null;
 };
 type HomeResponse = { serverTime: string; round: HomeRound | null };
 

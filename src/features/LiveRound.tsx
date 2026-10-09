@@ -22,6 +22,7 @@ type Snapshot = {
  question?:{text:string;options:string[]};counts?:number[];leaders?:number[];
  recap?:CrowdQuestion[];
  payouts?:{wallet:string;lamports:string;signature:string|null;status:string}[];
+ skrPilot?:{treasury:string;mint:string;amountRaw:string;status:string;winnerWallet?:string|null;signature?:string|null}|null;
 };
 const connection = new Connection('https://api.devnet.solana.com','confirmed');
 const explorer = (kind:string,id:string) => `https://explorer.solana.com/${kind}/${id}?cluster=devnet`;
@@ -131,26 +132,26 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    alive={state.eliminatedAt===null} joined={state.joined} outcome={resultOutcome(state.joined,state.eliminatedAt,state.index)}
    disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||displayedChoice!==null}
    pending={busy} error={error} stale={stale} playerCount={state.playerCount} survivorCount={state.survivorCount} onAnswer={choice=>void answer(choice)} onExit={close}
-  /> : visible&&state?.phase==='final'&&state.joined&&state.eliminatedAt===null ? <ScrollView contentContainerStyle={s.page}><Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text><WinnerResult rehearsal={state.isRehearsal} finalists={state.survivorCount} players={state.playerCount} payout={state.payouts?.find(p=>p.wallet===address)} onHome={close}/>{state.recap?<CrowdRecap questions={state.recap}/>:null}</ScrollView> : <ScrollView contentContainerStyle={s.page}>
+  /> : visible&&state?.phase==='final'&&state.joined&&state.eliminatedAt===null ? <ScrollView contentContainerStyle={s.page}><Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text><WinnerResult rehearsal={state.isRehearsal} pilot={state.skrPilot} finalists={state.survivorCount} players={state.playerCount} payout={state.payouts?.find(p=>p.wallet===address)} onHome={close}/>{state.recap?<CrowdRecap questions={state.recap}/>:null}</ScrollView> : <ScrollView contentContainerStyle={s.page}>
    <Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text>
-   <Text style={s.tag}>{state?.isRehearsal?'LIVE REHEARSAL':'LIVE GAME · DEVNET'}</Text>
+   <Text style={s.tag}>{state?.skrPilot?'LIVE PILOT · 1 SKR':state?.isRehearsal?'LIVE REHEARSAL':'LIVE GAME · DEVNET'}</Text>
    {error?<Text style={s.error}>{error}</Text>:null}
    {!state?<><Text style={s.title}>No game scheduled yet</Text><Text style={s.body}>The next game will appear here.</Text></>:<>
     <Text style={s.body}>{state.playerCount} joined · {state.survivorCount} still playing</Text>
     {state.phase==='lobby'&&<>
      <Text style={s.clock}>{formatRoomCountdown(remaining)}</Text>
      <Text style={s.title}>{state.joined?'You’re in!':'Ready to play?'}</Text>
-     <Text style={s.body}>{state.joined?'Keep hundo open. The full-screen countdown starts 15 seconds before the game.':state.isRehearsal?'Join with your connected wallet. No transaction or network fee.':'Sign to record your entry on-chain. Your wallet pays a small network fee in test SOL.'}</Text>
-     {!state.joined&&<Pressable accessibilityRole="button" style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':state.isRehearsal?'Join rehearsal':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
+     <Text style={s.body}>{state.joined?'Keep hundo open. The full-screen countdown starts 15 seconds before the game.':state.skrPilot?'Join this one-time 1 SKR pilot with your connected wallet. No entry fee.':state.isRehearsal?'Join with your connected wallet. No transaction or network fee.':'Sign to record your entry on-chain. Your wallet pays a small network fee in test SOL.'}</Text>
+     {!state.joined&&<Pressable accessibilityRole="button" style={s.button} disabled={busy||stale||remaining===0} onPress={()=>void join()}><Text style={s.buttonText}>{busy?'Confirming…':state.skrPilot?'Join 1 SKR pilot':state.isRehearsal?'Join rehearsal':pendingEntry.current?'Check transaction again':'Sign to join'}</Text></Pressable>}
     </>}
     {state.survivorCap!==null&&<Text style={s.body}>Player cap: {state.survivorCap}. Ties at the speed cutoff all advance.</Text>}
-    {!state.isRehearsal&&<><Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':sol(balance)+' SOL'}</Text><Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable></>}
+    {state.skrPilot?<><Text style={s.title}>1 SKR</Text><Text style={s.body}>One-time pilot prize on Solana Mainnet. Awarded to the sole finalist after the round; payment is confirmed by its transaction.</Text><Pressable onPress={()=>void Linking.openURL(`https://explorer.solana.com/address/${state.skrPilot!.treasury}`)}><Text style={s.link}>View pilot prize wallet ↗</Text></Pressable></>:!state.isRehearsal&&<><Text style={s.title}>{sol(state.potLamports)} SOL</Text><Text style={s.body}>Prize pool · Wallet balance: {balance===null?'unavailable':sol(balance)+' SOL'}</Text><Pressable onPress={()=>void Linking.openURL(explorer('address',state.potWallet))}><Text style={s.link}>View public wallet ↗</Text></Pressable></>}
     {state.phase==='final'&&<>
      <Text style={s.clock}>FINISH</Text>
      <Text style={s.title}>{state.joined&&state.eliminatedAt===null?'You made it!':state.joined?'The crowd surprised you.':'The room has spoken.'}</Text>
      <Text style={s.body}>{state.survivorCount} finalists out of {state.playerCount} people in the room.</Text>
      {state.eliminatedAt!==null&&state.recap?.find(q=>q.number===state.eliminatedAt)?<Text style={s.body}>{personalCrowdResult(state.recap.find(q=>q.number===state.eliminatedAt)!)}</Text>:null}
-     {state.isRehearsal?<Text style={s.body}>Rehearsal complete — no payouts are sent.</Text>:state.payouts?.map(p=><View key={p.wallet} style={s.card}><Text style={s.body}>{p.wallet===address?'You':p.wallet.slice(0,4)+'…'+p.wallet.slice(-4)} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}
+     {state.skrPilot?<View style={s.card}><Text style={s.body}>One-time pilot prize: 1 SKR to the sole finalist.</Text><Text style={s.body}>{state.skrPilot.status==='confirmed'?'Payment confirmed on Mainnet.':'Payment has not been confirmed yet.'}</Text>{state.skrPilot.status==='confirmed'&&state.skrPilot.signature?<Pressable onPress={()=>void Linking.openURL(`https://explorer.solana.com/tx/${state.skrPilot!.signature}`)}><Text style={s.link}>View 1 SKR payout ↗</Text></Pressable>:null}</View>:state.isRehearsal?<Text style={s.body}>Rehearsal complete — no payouts are sent.</Text>:state.payouts?.map(p=><View key={p.wallet} style={s.card}><Text style={s.body}>{p.wallet===address?'You':p.wallet.slice(0,4)+'…'+p.wallet.slice(-4)} · {sol(p.lamports)} SOL</Text>{p.status==='confirmed'&&p.signature?<Pressable onPress={()=>void Linking.openURL(explorer('tx',p.signature!))}><Text style={s.link}>View payout ↗</Text></Pressable>:<Text style={s.body}>Payout pending</Text>}</View>)}
     </>}
    </>}
    {state?.phase==='final'&&state.recap?<CrowdRecap questions={state.recap}/>:null}

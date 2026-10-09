@@ -198,8 +198,8 @@ export function HundoApp() {
         <Text style={s.eyebrow}>{nextRound?.phase === 'live' ? 'GAME IN PROGRESS' : 'NEXT GAME'}</Text>
         <Text style={s.homeTime}>{nextRound?.phase === 'live' ? 'LIVE' : startDate ? startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : home.data ? 'SOON' : '—'}</Text>
         <Text style={s.scheduleNote}>{startDate ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · your local time` : home.error || (home.data ? 'The next game will be announced here' : 'Loading the next game…')}</Text>
-        <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>1 000 <Text style={s.homeUnit}>SKR</Text></Text>
-        <Text style={s.daily}>PLANNED DAILY PRIZE</Text>
+        <Text adjustsFontSizeToFit numberOfLines={1} style={s.homePrize}>{nextRound?.skrPilot ? '1' : '1 000'} <Text style={s.homeUnit}>SKR</Text></Text>
+        <Text style={s.daily}>{nextRound?.skrPilot ? 'ONE-TIME PILOT PRIZE · MAINNET' : 'PLANNED DAILY PRIZE'}</Text>
       </View>
       <View style={s.rulesPanel}>
         <Text style={s.rulesText}>Can you predict the crowd?</Text>

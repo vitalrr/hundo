@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { request } from '../services/api';
 import type { CrowdQuestion } from '../game/crowd';
 import { demoCounts, demoQuestions } from '../game/demo';
 
 type Results = {
-  round: { id: string; startsAt: string; playerCount: number; isRehearsal: boolean } | null;
+  round: { id: string; startsAt: string; playerCount: number; isRehearsal: boolean; skrPilot?: {status:string;signature?:string|null}|null } | null;
   questions: CrowdQuestion[];
 };
 
@@ -43,7 +43,7 @@ export function RoundResults({ roundId, onBack }: { roundId: string | null; onBa
     {showExample && <Text style={s.message}>See a full sample game now. These percentages show how the reveal works; they are not real player votes.</Text>}
     {error && !showExample ? <Text style={s.message}>{error}</Text> : !showExample && !data ? <ActivityIndicator color="#7047EB" /> : !showExample && !data?.round ?
       <Text style={s.message}>No completed game to show yet. Come back after the round.</Text> : <>
-        {!showExample && data?.round && <Text style={s.message}>{new Date(data.round.startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {data.round.playerCount} people in the room{data.round.isRehearsal ? ' · recorded rehearsal' : ''}</Text>}
+        {!showExample && data?.round && <Text style={s.message}>{new Date(data.round.startsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {data.round.playerCount} people in the room{data.round.skrPilot ? ' · 1 SKR pilot' : data.round.isRehearsal ? ' · recorded rehearsal' : ''}</Text>}
         {question && <View style={s.card}>
           <Text style={s.questionNumber}>QUESTION {index + 1} / {questions.length}</Text>
           <Text style={s.question}>{question.text}</Text>
@@ -58,7 +58,9 @@ export function RoundResults({ roundId, onBack }: { roundId: string | null; onBa
           })}
         </View>}
         <View style={s.navigation}><Pressable accessibilityRole="button" disabled={index === 0} onPress={() => setIndex(value => value - 1)} style={[s.navButton, index === 0 && s.disabled]}><Text style={s.navText}>← Previous</Text></Pressable><Pressable accessibilityRole="button" disabled={index >= questions.length - 1} onPress={() => setIndex(value => value + 1)} style={[s.navButton, index >= questions.length - 1 && s.disabled]}><Text style={s.navText}>Next →</Text></Pressable></View>
-        {!showExample && data?.round?.isRehearsal && <Text style={s.message}>Rehearsal results · no prizes were paid.</Text>}
+        {!showExample && data?.round?.skrPilot && <Text style={s.message}>{data.round.skrPilot.status==='confirmed'?'The 1 SKR pilot prize was paid on Mainnet.':'The pilot prize has not been confirmed yet.'}</Text>}
+        {!showExample && data?.round?.skrPilot?.status==='confirmed' && data.round.skrPilot.signature && <Pressable accessibilityRole="link" onPress={()=>void Linking.openURL(`https://explorer.solana.com/tx/${data.round!.skrPilot!.signature}`)}><Text style={s.switchText}>View pilot payout ↗</Text></Pressable>}
+        {!showExample && data?.round?.isRehearsal && !data.round.skrPilot && <Text style={s.message}>Rehearsal results · no prizes were paid.</Text>}
       </>}
     {roundId === null && <Pressable accessibilityRole="button" onPress={() => { setIndex(0); setShowExample(value => !value); }} style={s.switchButton}><Text style={s.switchText}>{showExample ? 'See the latest real crowd →' : 'Back to example game →'}</Text></Pressable>}
     <Pressable accessibilityRole="button" onPress={onBack} style={s.back}><Text style={s.backText}>Back to home</Text></Pressable>

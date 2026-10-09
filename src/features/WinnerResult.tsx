@@ -6,24 +6,26 @@ import { useRoundAudio } from '../game/useRoundAudio';
 type Props = {
   demo?: boolean; rehearsal?: boolean; finalists?: number; players?: number;
   payout?: {lamports: string; status: string; signature: string | null};
+  pilot?: {amountRaw:string;status:string;winnerWallet?:string|null;signature?:string|null}|null;
   onHome: () => void;
 };
-export function WinnerResult({demo, rehearsal, finalists, players, payout, onHome}: Props) {
+export function WinnerResult({demo, rehearsal, finalists, players, payout, pilot, onHome}: Props) {
   const [sound, setSound] = useState(true);
   useRoundAudio('result', 10, 0, 'correct', sound);
-  const amount = demo ? '50' : payout ? (Number(payout.lamports) / 1e9).toLocaleString('en-US', {maximumFractionDigits:9}) : null;
+  const pilotWinner = !!pilot && finalists === 1;
+  const amount = demo ? '50' : pilotWinner ? '1' : payout ? (Number(payout.lamports) / 1e9).toLocaleString('en-US', {maximumFractionDigits:9}) : null;
   return <View style={s.root}>
-    <View style={s.row}><Text style={s.label}>{demo?'DEMO · WINNER PREVIEW':rehearsal?'REHEARSAL COMPLETE':'ROUND COMPLETE'}</Text><Pressable accessibilityRole="button" onPress={()=>setSound(v=>!v)}><Text style={s.link}>{sound?'SOUND ON':'SOUND OFF'}</Text></Pressable></View>
+    <View style={s.row}><Text style={s.label}>{demo?'DEMO · WINNER PREVIEW':pilot?'1 SKR PILOT FINAL':rehearsal?'REHEARSAL COMPLETE':'ROUND COMPLETE'}</Text><Pressable accessibilityRole="button" onPress={()=>setSound(v=>!v)}><Text style={s.link}>{sound?'SOUND ON':'SOUND OFF'}</Text></Pressable></View>
     <Text accessibilityRole="header" style={s.title}>YOU{ '\n' }WON!</Text>
     <Text style={s.subtitle}>You knew what the crowd was thinking. 10 times in a row.</Text>
     <CountdownCoins seconds={0}/>
     <View style={s.score}><Text style={s.scoreText}>10 / 10</Text><Text style={s.label}>QUESTIONS SURVIVED</Text></View>
     <View style={s.card}>
-      <Text style={s.label}>{demo?'EXAMPLE PRIZE':rehearsal?'YOU MADE THE FINAL':'YOUR PRIZE · DEVNET'}</Text>
-      {amount!==null&&!rehearsal?<Text adjustsFontSizeToFit numberOfLines={1} style={s.amount}>{amount} <Text style={s.unit}>{demo?'SKR':'SOL'}</Text></Text>:<Text style={s.scoreText}>{rehearsal?'Perfect instinct.':'Calculating your share…'}</Text>}
+      <Text style={s.label}>{demo?'EXAMPLE PRIZE':pilot?'PILOT PRIZE · MAINNET':rehearsal?'YOU MADE THE FINAL':'YOUR PRIZE · DEVNET'}</Text>
+      {amount!==null&&(!rehearsal||pilotWinner)?<Text adjustsFontSizeToFit numberOfLines={1} style={s.amount}>{amount} <Text style={s.unit}>{demo||pilot?'SKR':'SOL'}</Text></Text>:<Text style={s.scoreText}>{pilot?'No sole finalist':rehearsal?'Perfect instinct.':'Calculating your share…'}</Text>}
       <Text style={s.body}>{demo?'1 000 SKR shared by 20 winners.':`${finalists ?? 0} finalists out of ${players ?? 0} players.`}</Text>
-      <Text style={s.body}>{demo?'Demo example only — no prize or payment.':rehearsal?'A practice victory. No payouts are sent.':payout?.status==='confirmed'&&payout.signature?'Payment confirmed on Solana.':'Payment has not been confirmed yet.'}</Text>
-      {!demo&&!rehearsal&&payout?.status==='confirmed'&&payout.signature?<Pressable accessibilityRole="link" onPress={()=>void Linking.openURL(`https://explorer.solana.com/tx/${payout.signature}?cluster=devnet`)}><Text style={s.link}>View payout ↗</Text></Pressable>:null}
+      <Text style={s.body}>{demo?'Demo example only — no prize or payment.':pilot?pilotWinner?(pilot.status==='confirmed'&&pilot.signature?'1 SKR payment confirmed on Solana Mainnet.':'One-time pilot payout pending confirmation.'): 'The pilot prize requires one sole finalist.':rehearsal?'A practice victory. No payouts are sent.':payout?.status==='confirmed'&&payout.signature?'Payment confirmed on Solana.':'Payment has not been confirmed yet.'}</Text>
+      {pilot?.status==='confirmed'&&pilot.signature&&pilotWinner?<Pressable accessibilityRole="link" onPress={()=>void Linking.openURL(`https://explorer.solana.com/tx/${pilot.signature}`)}><Text style={s.link}>View 1 SKR payout ↗</Text></Pressable>:!demo&&!rehearsal&&payout?.status==='confirmed'&&payout.signature?<Pressable accessibilityRole="link" onPress={()=>void Linking.openURL(`https://explorer.solana.com/tx/${payout.signature}?cluster=devnet`)}><Text style={s.link}>View payout ↗</Text></Pressable>:null}
     </View>
     <Pressable accessibilityRole="button" style={s.button} onPress={onHome}><Text style={s.buttonText}>Back to home ↗</Text></Pressable>
   </View>;

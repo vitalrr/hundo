@@ -11,6 +11,16 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const hash = async (s: string) => Buffer.from(await crypto.subtle.digest('SHA-256', encoder.encode(s))).toString('hex');
 function check(error: unknown) { if (error) throw new Error('Не удалось обработать запрос'); }
 function uuid(value: unknown): string { if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) throw new Error('Некорректный ID'); return value; }
+async function pilotForRound(roundId: string, includeWinner = false) {
+  const { data, error } = await db.from('hundo_skr_pilots')
+    .select('treasury_wallet,mint,amount_raw,status,winner_wallet,signature')
+    .eq('round_id', roundId).maybeSingle(); check(error);
+  if (!data) return null;
+  return {
+    treasury: data.treasury_wallet, mint: data.mint, amountRaw: String(data.amount_raw), status: data.status,
+    ...(includeWinner ? { winnerWallet: data.winner_wallet, signature: data.status === 'confirmed' ? data.signature : null } : {}),
+  };
+}
 function verifySignedMessage(payload: Uint8Array, message: Uint8Array, key: Uint8Array) {
   // Some wallets return a detached Ed25519 signature. Always verify the stored challenge.
   if (payload.length === 64) return nacl.sign.detached.verify(message, payload, key);
@@ -28,7 +38,7 @@ Deno.serve(async req => {
     const body = JSON.parse(raw);
     if (body.action === 'home') {
       const { data, error } = await db.rpc('hundo_home'); check(error);
-      return json(data);
+      return json(data?.round ? { ...data, round: { ...data.round, skrPilot: await pilotForRound(data.round.id) } } : data);
     }
     if (body.action === 'results') {
       const requestedId = body.roundId == null ? null : uuid(body.roundId);
@@ -44,7 +54,7 @@ Deno.serve(async req => {
         const votes = questions.reduce((sum, q) => sum + q.counts.reduce((a: number, b: number) => a + b, 0), 0);
         if (!requestedId && votes === 0) continue;
         const { count, error: playersError } = await db.from('hundo_players').select('wallet', { count: 'exact', head: true }).eq('round_id', round.id); check(playersError);
-        return json({ round: { id: round.id, startsAt: round.starts_at, playerCount: count ?? 0, isRehearsal: round.is_rehearsal }, questions });
+        return json({ round: { id: round.id, startsAt: round.starts_at, playerCount: count ?? 0, isRehearsal: round.is_rehearsal, skrPilot: await pilotForRound(round.id, true) }, questions });
       }
       return json({ round: null, questions: [] });
     }
@@ -140,7 +150,7 @@ Deno.serve(async req => {
     if (body.action === 'snapshot') {
       const { data, error } = await db.rpc('hundo_snapshot', { p_round: roundId, p_wallet: wallet }); check(error);
       const { data: round, error: roundError } = await db.from('hundo_rounds').select('is_rehearsal').eq('id', roundId).single(); check(roundError);
-      return json({ ...data, isRehearsal: round.is_rehearsal });
+      return json({ ...data, isRehearsal: round.is_rehearsal, skrPilot: await pilotForRound(roundId, data?.phase === 'final') });
     }
     return json({ error: 'Unknown action' }, 400);
   } catch (e) { return json({ error: e instanceof Error ? e.message : 'Ошибка запроса' }, 400); }

@@ -6,6 +6,8 @@
 
 **[Download the Android APK (v0.2.7)](https://github.com/vitalrr/hundo/releases/download/v0.2.7/hundo-0.2.7.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.7) · [Recorded two-player rehearsal](docs/rehearsal.md)
 
+The `pilot/one-skr-video` branch contains an isolated, one-time [1 SKR Mainnet video pilot](docs/skr-pilot.md). It does not turn the published daily rehearsal APK into a paid game; the pilot pays only a verified sole finalist after an operator submits and verifies the transaction.
+
 The APK is a test-signed competition build. It installs directly on a compatible Android phone; the phone does not need to share Wi-Fi with the developer's Mac. The offline **See how it works** demo can be explored without a wallet. A live room requires internet and an Android wallet that supports Solana Mobile Wallet Adapter. The physical-device test used a Solana Seeker.
 
 The scheduled rounds in the current competition build are **free, zero-prize rehearsals**. The **1,000 SKR** figure on the home screen is a clearly labeled *planned daily prize* example, not a funded pool or an offer of a current payout. The game runs at **19:00 UTC** when a round is scheduled; each phone displays that time locally.
