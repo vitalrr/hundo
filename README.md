@@ -4,7 +4,7 @@
 
 ## Install and see it work
 
-**[Download the Android APK (v0.2.6)](https://github.com/vitalrr/hundo/releases/download/v0.2.6/hundo-0.2.6.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.6) · [Recorded two-player rehearsal](docs/rehearsal.md)
+**[Download the Android APK (v0.2.7)](https://github.com/vitalrr/hundo/releases/download/v0.2.7/hundo-0.2.7.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.7) · [Recorded two-player rehearsal](docs/rehearsal.md)
 
 The APK is a test-signed competition build. It installs directly on a compatible Android phone; the phone does not need to share Wi-Fi with the developer's Mac. The offline **See how it works** demo can be explored without a wallet. A live room requires internet and an Android wallet that supports Solana Mobile Wallet Adapter. The physical-device test used a Solana Seeker.
 

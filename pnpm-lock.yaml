@@ -7,17 +7,24 @@ settings:
 overrides:
   '@xmldom/xmldom@0.7.13': 0.8.15
   ajv@8.11.0: 8.20.0
+  decode-uri-component@0.2.2: 0.5.0
   image-size@1.2.1: 2.0.4
   postcss@8.4.49: 8.5.29
   shell-quote@1.10.0: 1.12.0
   source-map-js@1.2.1: 1.2.2
+  stream-json@1.9.1: 3.7.0
   tar@6.2.1: 7.5.22
+  uuid@7.0.3: 11.1.1
+  uuid@8.3.2: 11.1.1
 
 patchedDependencies:
   '@expo/cli@0.22.28': 0394e6f744f9223831c837736361a2ce87fed6962b1437e64a778d11b9b6e189
   braces@3.0.3: ebf4f7f1411f753f799882565ac4be72f386f439624f09076a0889c8bc457345
+  jayson@4.3.0: e23f5eb788443bebdf4133e5d7bc6784747b892857f68397ba6a04b6b8df10b6
   metro@0.81.5: 6c1e3548e2d42c370a86a4708b3c574b1be6026eff59ed6f388f6bb7da04c6a4
   node-forge@1.4.0: 575eaba8f4d2d50d4977e9257ad080290c4040069be744fd4faedb7cc845c433
+  query-string@7.1.3: 8cf93ecf8b1c3d495bed8d4e8e723569a358e9da0615fb1fbee180f1f41fc33d
+  sprintf-js@1.0.3: c66369bcc00e76e60c30c6982cdfff12874d10cf8b9861232ffb4d97d7b6a8d1
 
 importers:
 
@@ -2031,9 +2038,9 @@ packages:
       supports-color:
         optional: true
 
-  decode-uri-component@0.2.2:
-    resolution: {integrity: sha512-FqUYQ+8o158GyGTrMFJms9qh3CqTKvAqgqsTnkLI8sKu0028orqBhxNMFkFen0zGyg6epACD32pjVk58ngIErQ==}
-    engines: {node: '>=0.10'}
+  decode-uri-component@0.5.0:
+    resolution: {integrity: sha512-1BiQVoK8C9gUbQU6NzAtO/tkz2qOFpEObMWpcFvhx4fYnj4Oc5yzaJN/LD36ihkVUdXyh5ZekzX+yM+ty/SrPg==}
+    engines: {node: '>=14.16'}
 
   deep-extend@0.6.0:
     resolution: {integrity: sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==}
@@ -3885,11 +3892,11 @@ packages:
     resolution: {integrity: sha512-uyQK/mx5QjHun80FLJTfaWE7JtwfRMKBLkMne6udYOmvH0CawotVa7TfgYHzAnpphn4+TweIx1QKMnRIbipmUg==}
     engines: {node: '>= 0.10.0'}
 
-  stream-chain@2.2.5:
-    resolution: {integrity: sha512-1TJmBx6aSWqZ4tx7aTpBDXK0/e2hhcNSTV8+CbFJtDjbb+I1mZ8lHit0Grw9GRT+6JbIrrDd8esncgBi8aBXGA==}
+  stream-chain@4.2.6:
+    resolution: {integrity: sha512-1zeJ8CrtJfmiba26ui8jXkq/xLRFvhzkdH02D5QLO9Cnovgeb28IJxg88DdraWnjnkbOol/++uIAybJbJhk7ig==}
 
-  stream-json@1.9.1:
-    resolution: {integrity: sha512-uWkjJ+2Nt/LO9Z/JyKZbMusL8Dkh97uUBTv3AJQ74y07lVahLY4eEFsPsE97pxYBwr8nnjMAIch5eqI0gPShyw==}
+  stream-json@3.7.0:
+    resolution: {integrity: sha512-rCSBdcBP/bPk6T8QFcxAj1MSzAuc5i49cYW6IE7sYObNEPccBJIUiL6fU9c9BWt40aJK0siVynLX7lWaW8alXw==}
 
   strict-uri-encode@2.0.0:
     resolution: {integrity: sha512-QwiXZgpRcKkhTj2Scnn++4PKtWsH0kpzZ62L2R6c/LUVYv7hVnZqcg2+sMuT6R7Jusu1vviK/MFsu6kNJfWlEQ==}
@@ -4139,18 +4146,12 @@ packages:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
 
+  uuid@11.1.1:
+    resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
+    hasBin: true
+
   uuid@14.0.2:
     resolution: {integrity: sha512-xZe/16rV4aa+HGSOCiY2YeLT1OybRLrrkL/Rqaq7p7GMVXjFh+6wN4oMYgjFmnSnhY8t6Xpdl2l9qmnHYuMHwQ==}
-    hasBin: true
-
-  uuid@7.0.3:
-    resolution: {integrity: sha512-DPSke0pXhTZgoF/d+WSt2QaKMCFSfx7QegxEWT+JOuHF5aWrKEn0G+ztjuJg/gG8/ItK+rbPCD/yNv8yyih6Cg==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
-    hasBin: true
-
-  uuid@8.3.2:
-    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   validate-npm-package-name@5.0.1:
@@ -5287,7 +5288,7 @@ snapshots:
 
   '@expo/bunyan@4.0.1':
     dependencies:
-      uuid: 8.3.2
+      uuid: 11.1.1
 
   '@expo/cli@0.22.28(patch_hash=0394e6f744f9223831c837736361a2ce87fed6962b1437e64a778d11b9b6e189)(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@6.0.6)':
     dependencies:
@@ -5544,7 +5545,7 @@ snapshots:
       md5: 2.3.0
       node-fetch: 2.7.0
       remove-trailing-slash: 0.1.1
-      uuid: 8.3.2
+      uuid: 11.1.1
     transitivePeerDependencies:
       - encoding
 
@@ -5887,7 +5888,7 @@ snapshots:
       '@react-navigation/routers': 6.1.9
       escape-string-regexp: 4.0.0
       nanoid: 3.3.19
-      query-string: 7.1.3
+      query-string: 7.1.3(patch_hash=8cf93ecf8b1c3d495bed8d4e8e723569a358e9da0615fb1fbee180f1f41fc33d)
       react: 18.3.1
       react-is: 16.13.1
       use-latest-callback: 0.2.6(react@18.3.1)
@@ -6128,7 +6129,7 @@ snapshots:
       bs58: 4.0.1
       buffer: 6.0.3
       fast-stable-stringify: 1.0.0
-      jayson: 4.3.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      jayson: 4.3.0(patch_hash=e23f5eb788443bebdf4133e5d7bc6784747b892857f68397ba6a04b6b8df10b6)(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       node-fetch: 2.7.0
       rpc-websockets: 9.3.9
       superstruct: 2.0.2
@@ -6405,7 +6406,7 @@ snapshots:
 
   argparse@1.0.10:
     dependencies:
-      sprintf-js: 1.0.3
+      sprintf-js: 1.0.3(patch_hash=c66369bcc00e76e60c30c6982cdfff12874d10cf8b9861232ffb4d97d7b6a8d1)
 
   argparse@2.0.1: {}
 
@@ -6930,7 +6931,7 @@ snapshots:
     optionalDependencies:
       supports-color: 8.1.1
 
-  decode-uri-component@0.2.2: {}
+  decode-uri-component@0.5.0: {}
 
   deep-extend@0.6.0: {}
 
@@ -7797,7 +7798,7 @@ snapshots:
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
 
-  jayson@4.3.0(bufferutil@4.1.0)(utf-8-validate@6.0.6):
+  jayson@4.3.0(patch_hash=e23f5eb788443bebdf4133e5d7bc6784747b892857f68397ba6a04b6b8df10b6)(bufferutil@4.1.0)(utf-8-validate@6.0.6):
     dependencies:
       '@types/connect': 3.4.38
       '@types/node': 12.20.55
@@ -7808,8 +7809,8 @@ snapshots:
       eyes: 0.1.8
       isomorphic-ws: 4.0.1(ws@7.5.13(bufferutil@4.1.0)(utf-8-validate@6.0.6))
       json-stringify-safe: 5.0.1
-      stream-json: 1.9.1
-      uuid: 8.3.2
+      stream-json: 3.7.0
+      uuid: 11.1.1
       ws: 7.5.13(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
@@ -8598,9 +8599,9 @@ snapshots:
 
   qrcode-terminal@0.11.0: {}
 
-  query-string@7.1.3:
+  query-string@7.1.3(patch_hash=8cf93ecf8b1c3d495bed8d4e8e723569a358e9da0615fb1fbee180f1f41fc33d):
     dependencies:
-      decode-uri-component: 0.2.2
+      decode-uri-component: 0.5.0
       filter-obj: 1.1.0
       split-on-first: 1.1.0
       strict-uri-encode: 2.0.0
@@ -8949,7 +8950,7 @@ snapshots:
 
   split-on-first@1.1.0: {}
 
-  sprintf-js@1.0.3: {}
+  sprintf-js@1.0.3(patch_hash=c66369bcc00e76e60c30c6982cdfff12874d10cf8b9861232ffb4d97d7b6a8d1): {}
 
   ssri@10.0.6:
     dependencies:
@@ -8971,11 +8972,11 @@ snapshots:
 
   stream-buffers@2.2.0: {}
 
-  stream-chain@2.2.5: {}
+  stream-chain@4.2.6: {}
 
-  stream-json@1.9.1:
+  stream-json@3.7.0:
     dependencies:
-      stream-chain: 2.2.5
+      stream-chain: 4.2.6
 
   strict-uri-encode@2.0.0: {}
 
@@ -9199,11 +9200,9 @@ snapshots:
 
   utils-merge@1.0.1: {}
 
+  uuid@11.1.1: {}
+
   uuid@14.0.2: {}
-
-  uuid@7.0.3: {}
-
-  uuid@8.3.2: {}
 
   validate-npm-package-name@5.0.1: {}
 
@@ -9307,7 +9306,7 @@ snapshots:
   xcode@3.0.1:
     dependencies:
       simple-plist: 1.3.1
-      uuid: 7.0.3
+      uuid: 11.1.1
 
   xml2js@0.6.0:
     dependencies:

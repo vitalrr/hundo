@@ -5,13 +5,20 @@ nodeLinker: hoisted
 overrides:
   "@xmldom/xmldom@0.7.13": 0.8.15
   "ajv@8.11.0": 8.20.0
+  "decode-uri-component@0.2.2": 0.5.0
   "image-size@1.2.1": 2.0.4
   "postcss@8.4.49": 8.5.29
   "shell-quote@1.10.0": 1.12.0
   "source-map-js@1.2.1": 1.2.2
+  "stream-json@1.9.1": 3.7.0
   "tar@6.2.1": 7.5.22
+  "uuid@7.0.3": 11.1.1
+  "uuid@8.3.2": 11.1.1
 patchedDependencies:
   '@expo/cli@0.22.28': patches/@expo__cli@0.22.28.patch
   braces@3.0.3: patches/braces@3.0.3.patch
+  jayson@4.3.0: patches/jayson@4.3.0.patch
   metro@0.81.5: patches/metro@0.81.5.patch
   node-forge@1.4.0: patches/node-forge@1.4.0.patch
+  query-string@7.1.3: patches/query-string@7.1.3.patch
+  sprintf-js@1.0.3: patches/sprintf-js@1.0.3.patch
