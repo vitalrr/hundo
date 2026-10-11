@@ -13,7 +13,7 @@ export function useHome(enabled: boolean) {
   const [data, setData] = useState<HomeResponse | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) { setData(null); setError(''); return; }
     let stopped = false, inFlight = false;
     let timer: ReturnType<typeof setTimeout>;
     async function refresh() {
@@ -34,7 +34,10 @@ export function useHome(enabled: boolean) {
       }
     }
     void refresh();
-    const listener = AppState.addEventListener('change', state => { if (state === 'active') void refresh(); });
+    const listener = AppState.addEventListener('change', state => {
+      if (state === 'background') setData(null);
+      if (state === 'active') void refresh();
+    });
     return () => { stopped = true; clearTimeout(timer); listener.remove(); };
   }, [enabled]);
   return { data, error };
