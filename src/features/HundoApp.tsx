@@ -209,7 +209,7 @@ export function HundoApp() {
       </View>
       <Text accessibilityLiveRegion="polite" style={s.waiting}>{nextRound ? nextRound.playerCount === 0 ? 'Be the first in the room' : `${nextRound.playerCount} ${nextRound.playerCount === 1 ? 'person' : 'people'} in the room` : home.data ? 'Be ready for the next game' : home.error ? 'Player count unavailable' : 'Checking who’s joining…'}</Text>
       {!address && <Button title={restoringSession ? 'Restoring wallet…' : busy ? 'Opening wallet…' : 'Connect wallet ↗'} onPress={connect} disabled={busy || restoringSession} />}
-      {API_URL && address ? <Button title="Join the room ↗" onPress={()=>{setMenuOpen(false);setLiveOpen(true);}}/> : null}
+      {API_URL && address && nextRound ? <Button title="Join the room ↗" onPress={()=>{setMenuOpen(false);setLiveOpen(true);}}/> : null}
       <Button title="See how it works ↗" onPress={openDemoGuide} secondary />
       <Text style={s.footnote}>Three quick tips, then a playable demo</Text>
       {API_URL && address ? <Button title="See the latest crowd ↗" onPress={()=>{setResultsRoundId(null);setScreen('results');}} secondary /> : null}

@@ -41,6 +41,8 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  useEffect(()=>{const listener=AppState.addEventListener('change',value=>{setForeground(value==='active');if(value==='active')setResumeCount(count=>count+1);});return()=>listener.remove();},[]);
  const wallet=useMobileWallet();const [roundId,setRoundId]=useState<string|null>(null);const [state,setState]=useState<Snapshot|null>(null);
  const snapshotRef=useRef(state);snapshotRef.current=state;
+ const onCloseRef=useRef(onClose);onCloseRef.current=onClose;
+ const openRef=useRef(open);openRef.current=open;
  const [localAnswer,setLocalAnswer]=useState<{round:string;index:number;choice:number}|null>(null);
  const submitting=useRef(false);
  const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [balance,setBalance]=useState<number|null>(null);
@@ -52,11 +54,24 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    let nextDelay=1000;
    try{
     let id=roundId;
-    if(!id||snapshotRef.current?.phase==='final'){
-     const latest=await request<{roundId:string|null}>('latest');
-     if(latest.roundId&&latest.roundId!==id){id=latest.roundId;if(!stopped){setRoundId(id);setDismissed(null);}}
-    }
-    if(id){const sent=Date.now();const next=await request<Snapshot>('snapshot',{roundId:id});if(!stopped){
+    let completedSnapshot:Snapshot|null=null;
+    let sent=0;
+    // Check every poll: a cancelled round may disappear while its snapshot is open.
+    const latest=await request<{roundId:string|null}>('latest');
+    if(!latest.roundId&&id&&snapshotRef.current?.phase==='final'){
+     // A completed round can leave the home feed while its recap is still open.
+     try{sent=Date.now();completedSnapshot=await request<Snapshot>('snapshot',{roundId:id});}
+     catch{ id=null; }
+    }else{id=latest.roundId;}
+    if(id!==roundId){
+     if(!stopped){
+      setRoundId(id);setState(null);setLocalAnswer(null);
+      pendingEntry.current=null;synced.current={offset:0,ready:false,at:0};
+      setDismissed(null);
+      if(!id)onCloseRef.current();
+     }
+    }else if(!id&&openRef.current&&!stopped){onCloseRef.current();}
+    if(id){if(!completedSnapshot)sent=Date.now();const next=completedSnapshot??await request<Snapshot>('snapshot',{roundId:id});if(!stopped){
      const received=Date.now();
      const offset=Date.parse(next.serverTime)-(sent+received)/2;
      if(!synced.current.ready||Math.abs(offset-synced.current.offset)>250) synced.current.offset=offset;
