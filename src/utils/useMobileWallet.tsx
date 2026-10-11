@@ -9,7 +9,7 @@ import { useCallback, useMemo } from "react";
 import { SignInPayload } from "@solana-mobile/mobile-wallet-adapter-protocol";
 
 export function useMobileWallet() {
-  const { authorizeSessionWithSignIn, authorizeSession, deauthorizeSession } =
+  const { authorizeSessionWithSignIn, authorizeSession, deauthorizeSession, forgetAuthorization, hasAuthorization } =
     useAuthorization();
 
   const connect = useCallback(async (): Promise<Account> => {
@@ -39,10 +39,18 @@ export function useMobileWallet() {
   );
 
   const disconnect = useCallback(async (): Promise<void> => {
-    await transact(async (wallet) => {
-      await deauthorizeSession(wallet);
-    });
-  }, [deauthorizeSession]);
+    try {
+      if (hasAuthorization) {
+        await transact(async (wallet) => {
+          await deauthorizeSession(wallet);
+        });
+      }
+    } finally {
+      // A wallet app can be unavailable or decline deauthorization. Still
+      // forget its cached account so the next connect starts fresh.
+      await forgetAuthorization();
+    }
+  }, [deauthorizeSession, forgetAuthorization, hasAuthorization]);
 
   const signAndSendTransaction = useCallback(
     async (

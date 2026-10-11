@@ -36,6 +36,7 @@ export function HundoApp() {
   const [liveVisible, setLiveVisible] = useState(false);
   const [resultsRoundId, setResultsRoundId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [restoringSession, setRestoringSession] = useState(Platform.OS !== 'web' && Boolean(API_URL));
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
@@ -175,6 +176,40 @@ export function HundoApp() {
       Alert.alert(enabled ? 'Game reminders' : 'Game reminders off', e instanceof Error ? e.message : 'Could not update reminders.');
     } finally { setPushBusy(false); }
   }
+  async function disconnectWallet() {
+    if (!address || disconnecting) return;
+    setDisconnecting(true);
+    let remindersFailed = false;
+    let serverLogoutFailed = false;
+    let walletDeauthorizationFailed = false;
+    try {
+      if (API_URL && pushEnabled !== false) {
+        try {
+          const installationId = await getGamePushInstallationId();
+          await request('push-disable', { installationId });
+        } catch { remindersFailed = true; }
+      }
+      if (API_URL) {
+        try { await request('logout'); }
+        catch { serverLogoutFailed = true; }
+      }
+      // Do not show the connect screen until the persisted login is gone.
+      await clearGameSession();
+      setSession('');
+      setAddress('');
+      setLiveOpen(false);
+      setResultsRoundId(null);
+      setScreen('welcome');
+      setMenuOpen(false);
+      setPushEnabled(null);
+      setGamesPlayed(null);
+      try { await wallet.disconnect(); }
+      catch { walletDeauthorizationFailed = true; }
+      if (serverLogoutFailed || remindersFailed || walletDeauthorizationFailed) Alert.alert('Wallet disconnected', 'hundo forgot your wallet. If the wallet app still lists hundo as authorized, remove it there. Your server session will expire automatically if it could not be closed now; check notification settings if reminders continue.');
+    } catch (e) {
+      Alert.alert('Could not disconnect', e instanceof Error ? e.message : 'Please try again.');
+    } finally { setDisconnecting(false); }
+  }
   function leave() {
     if (Platform.OS === 'web' && (screen === 'play' || screen === 'countdown')) { if (window.confirm('Leave the demo? You can start again anytime.')) setScreen('lobby'); return; }
     if (screen === 'play' || screen === 'countdown') Alert.alert('Leave the demo?', 'You can start again anytime.', [{ text: 'Stay', style: 'cancel' }, { text: 'Leave', onPress: () => setScreen('lobby') }]);
@@ -192,7 +227,7 @@ export function HundoApp() {
   const showingGuide = screen === 'demo-guide';
   return <View style={[s.safe,(demoStage||showingGuide)&&{backgroundColor:spectator&&demoStage?'#E7E7EF':'#EFE7FF'}]}><SystemChrome active={!liveVisible} color={demoStage||showingGuide?(spectator&&demoStage?'#E7E7EF':'#EFE7FF'):C.bg}/><SafeAreaView style={{flex:1,backgroundColor:'transparent'}}><StatusBar style="dark" />{showingGuide?<View style={{flex:1}}><GameStage phase={guideStep===2?'result':'question'} index={0} seconds={guideStep===2?0:15} remainingMs={ANSWER_MS} question={demoQuestions[0]} choice={guideStep===2?0:null} counts={guideStep===2?[...demoCounts[0]]:undefined} leaders={[1]} alive={guideStep!==2} joined outcome={guideStep===2?'out':'correct'} disabled demo tutorial onAnswer={()=>{}} onExit={()=>setScreen('lobby')}/><View style={s.guideScrim}><View style={s.guideCard}><Text style={s.guideLabel}>{guide[guideStep].label}</Text><Text style={s.guideTitle}>{guide[guideStep].title}</Text><Text style={s.guideBody}>{guide[guideStep].detail}</Text><Button title={guideStep===2?'Start demo ↗':'Next ↗'} onPress={()=>guideStep===2?startDemo():setGuideStep(step=>step+1)}/><Pressable accessibilityRole="button" onPress={startDemo}><Text style={s.guideSkip}>Skip tips · Start demo</Text></Pressable></View></View></View>:demoStage?<GameStage phase={phase.phase} index={phase.index} seconds={Math.ceil(phase.remaining/1000)} remainingMs={phase.remaining} question={q} choice={answers[phase.index]??null} counts={phase.phase==='result'?counts:undefined} leaders={counts.flatMap((n,i)=>n===max?[i]:[])} alive={alive} joined outcome={resultOutcome(true,eliminatedAt,phase.index)} disabled={phase.phase!=='question'||!alive||answers[phase.index]!==undefined} demo onPreviewWinner={()=>{setEliminatedAt(null);setScreen('final');}} onAnswer={value=>answer(value as Choice)} onExit={leave}/>:screen==='results'?<RoundResults roundId={resultsRoundId} onBack={()=>setScreen('lobby')}/>:<ScrollView contentContainerStyle={s.page}>
     <View style={s.header}><Pressable accessibilityRole="button" accessibilityLabel="Go to home screen" onPress={leave}><Text style={s.wordmark}>hundo<Text style={{ color: C.purple }}>.</Text></Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel={menuOpen ? 'Close menu' : 'Open menu'} onPress={() => setMenuOpen(value => !value)} style={s.menuButton}><Text style={s.menuIcon}>{menuOpen ? '×' : '☰'}</Text></Pressable></View>
-    {menuOpen && <View style={s.menuPanel}><Text style={s.menuHeading}>YOUR ROOM</Text><Text style={s.menuText}>{address ? `Wallet ${address.slice(0, 5)}…${address.slice(-5)} connected · Devnet` : 'Wallet not connected'}</Text><Text style={s.menuText}>{address ? `Games played: ${gamesPlayed === null ? 'Loading…' : gamesPlayed}` : 'Games played: —'}</Text>{API_URL && address && pushEnabled !== null ? <Button title={pushBusy ? 'Updating…' : pushEnabled ? 'Notifications on · Turn off' : 'Notifications off · Turn on'} onPress={() => void setGameReminders(!pushEnabled)} secondary disabled={pushBusy} /> : null}</View>}
+    {menuOpen && <View style={s.menuPanel}><Text style={s.menuHeading}>YOUR ROOM</Text><Text style={s.menuText}>{address ? `Wallet ${address.slice(0, 5)}…${address.slice(-5)} connected · Devnet` : 'Wallet not connected'}</Text><Text style={s.menuText}>{address ? `Games played: ${gamesPlayed === null ? 'Loading…' : gamesPlayed}` : 'Games played: —'}</Text>{API_URL && address && pushEnabled !== null ? <Button title={pushBusy ? 'Updating…' : pushEnabled ? 'Notifications on · Turn off' : 'Notifications off · Turn on'} onPress={() => void setGameReminders(!pushEnabled)} secondary disabled={pushBusy || disconnecting} /> : null}{address ? <Button title={disconnecting ? 'Disconnecting…' : 'Disconnect wallet'} onPress={() => void disconnectWallet()} secondary disabled={disconnecting || pushBusy || busy} /> : null}</View>}
     {(screen === 'welcome' || screen === 'lobby') && <>
       <View style={s.homeHero}>
         <Text style={s.eyebrow}>{nextRound?.phase === 'live' ? 'GAME IN PROGRESS' : 'NEXT GAME'}</Text>

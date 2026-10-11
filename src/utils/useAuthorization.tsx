@@ -112,6 +112,10 @@ export function useAuthorization() {
       queryClient.invalidateQueries({ queryKey: ["wallet-authorization"] });
     },
   });
+  const forgetAuthorization = useCallback(async () => {
+    await setAuthorization(null);
+    queryClient.setQueryData(["wallet-authorization"], null);
+  }, [queryClient, setAuthorization]);
 
   const handleAuthorizationResult = useCallback(
     async (
@@ -167,9 +171,11 @@ export function useAuthorization() {
       authorizeSession,
       authorizeSessionWithSignIn,
       deauthorizeSession,
+      forgetAuthorization,
+      hasAuthorization: Boolean(authorization?.authToken),
       selectedAccount: authorization?.selectedAccount ?? null,
       isLoading,
     }),
-    [authorization, authorizeSession, deauthorizeSession]
+    [authorization, authorizeSession, deauthorizeSession, forgetAuthorization]
   );
 }

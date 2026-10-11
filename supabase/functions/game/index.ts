@@ -94,6 +94,10 @@ Deno.serve(async req => {
       }
       return json({ wallet });
     }
+    if (body.action === 'logout') {
+      const { error } = await db.from('hundo_sessions').delete().eq('token_hash', sessionHash); check(error);
+      return json({ signedOut: true });
+    }
     if (body.action === 'profile') {
       const { data, error } = await db.rpc('hundo_games_played', { p_wallet: wallet }); check(error);
       return json({ gamesPlayed: data ?? 0 });
