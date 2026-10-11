@@ -1,12 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { answerTone, resultOutcome, shouldTakeOver } from '../src/game/presentation.ts';
+import { answerTone, resultOutcome, shouldSwitchLiveRound, shouldTakeOver } from '../src/game/presentation.ts';
 
 test('live game takes over at 15 seconds and stays full-screen through final',()=>{
  assert.equal(shouldTakeOver('lobby',16),false);
  assert.equal(shouldTakeOver('lobby',15),true);
  assert.equal(shouldTakeOver('lobby',0),true);
  for(const phase of ['question','result','final'] as const) assert.equal(shouldTakeOver(phase,10),true);
+});
+test('finishing a round keeps its winner screen even after the home listing moves on',()=>{
+ const start=100_000, finish=start+200_000, round='today';
+ assert.equal(shouldSwitchLiveRound(null,round,'question',start+20_000,start),true);
+ assert.equal(shouldSwitchLiveRound(null,round,'result',finish-500,start),false);
+ assert.equal(shouldSwitchLiveRound(null,round,'final',finish+2_000,start),false);
+ assert.equal(shouldSwitchLiveRound(null,round,'final',finish+2_000,start,true),true);
 });
 test('selection stays distinct from revealed majority and wrong answers',()=>{
  assert.equal(answerTone(1,1,false,[0]),'selected');

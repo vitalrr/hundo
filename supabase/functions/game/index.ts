@@ -150,7 +150,17 @@ Deno.serve(async req => {
     if (body.action === 'snapshot') {
       const { data, error } = await db.rpc('hundo_snapshot', { p_round: roundId, p_wallet: wallet }); check(error);
       const { data: round, error: roundError } = await db.from('hundo_rounds').select('is_rehearsal').eq('id', roundId).single(); check(roundError);
-      return json({ ...data, isRehearsal: round.is_rehearsal, skrPilot: await pilotForRound(roundId, data?.phase === 'final') });
+      // Everyone can preload the upcoming question during the same five-second
+      // reveal. Keep it off the screen until the server's next question starts.
+      let nextQuestion = null;
+      if (data?.phase === 'result' && data.index < 9) {
+        const { data: upcoming, error: upcomingError } = await db.from('hundo_questions')
+          .select('text,options').eq('round_id', roundId).eq('number', data.index + 1).single();
+        check(upcomingError);
+        nextQuestion = upcoming;
+      }
+      const skrPilot = await pilotForRound(roundId, data?.phase === 'final');
+      return json({ ...data, serverTime: new Date().toISOString(), nextQuestion, isRehearsal: round.is_rehearsal, skrPilot });
     }
     return json({ error: 'Unknown action' }, 400);
   } catch (e) { return json({ error: e instanceof Error ? e.message : 'Ошибка запроса' }, 400); }

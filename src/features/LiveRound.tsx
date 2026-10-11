@@ -12,14 +12,14 @@ import { WinnerResult } from './WinnerResult';
 import { CrowdRecap } from './CrowdRecap';
 import { personalCrowdResult, type CrowdQuestion } from '../game/crowd';
 import { SystemChrome } from './SystemChrome';
-import { resultOutcome, shouldTakeOver } from '../game/presentation';
-import { ANSWER_MS, QUESTION_MS } from '../game/rules';
+import { resultOutcome, shouldSwitchLiveRound, shouldTakeOver } from '../game/presentation';
+import { ANSWER_MS, QUESTION_MS, questionPhase } from '../game/rules';
 
 type Snapshot = {
  roundId:string;serverTime:string;startsAt:string;phase:'lobby'|'question'|'result'|'final';index:number;
  potWallet:string;potLamports:string;network:'devnet';survivorCap:number|null;playerCount:number;survivorCount:number;
  joined:boolean;eliminatedAt:number|null;myChoice:number|null;isRehearsal:boolean;
- question?:{text:string;options:string[]};counts?:number[];leaders?:number[];
+ question?:{text:string;options:string[]};nextQuestion?:{text:string;options:string[]}|null;counts?:number[];leaders?:number[];
  recap?:CrowdQuestion[];
  payouts?:{wallet:string;lamports:string;signature:string|null;status:string}[];
  skrPilot?:{treasury:string;mint:string;amountRaw:string;status:string;winnerWallet?:string|null;signature?:string|null}|null;
@@ -44,9 +44,9 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  const onCloseRef=useRef(onClose);onCloseRef.current=onClose;
  const openRef=useRef(open);openRef.current=open;
  const [localAnswer,setLocalAnswer]=useState<{round:string;index:number;choice:number}|null>(null);
- const submitting=useRef(false);
+ const submitting=useRef<string|null>(null);
  const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [balance,setBalance]=useState<number|null>(null);
- const [,setTick]=useState(0);const synced=useRef({offset:0,ready:false,at:0});const pendingEntry=useRef<{round:string;signature:string}|null>(null);
+ const [,setTick]=useState(0);const synced=useRef({offset:0,ready:false,at:0,bestRtt:Infinity});const pendingEntry=useRef<{round:string;signature:string}|null>(null);
  useEffect(()=>{const timer=setInterval(()=>setTick(n=>n+1),200);return()=>clearInterval(timer);},[]);
  useEffect(()=>{
   let stopped=false;let timer:ReturnType<typeof setTimeout>;
@@ -54,27 +54,29 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    let nextDelay=1000;
    try{
     let id=roundId;
-    let completedSnapshot:Snapshot|null=null;
-    let sent=0;
-    // Check every poll: a cancelled round may disappear while its snapshot is open.
-    const latest=await request<{roundId:string|null}>('latest');
-    if(!latest.roundId&&id&&snapshotRef.current?.phase==='final'){
-     // A completed round can leave the home feed while its recap is still open.
-     try{sent=Date.now();completedSnapshot=await request<Snapshot>('snapshot',{roundId:id});}
-     catch{ id=null; }
-    }else{id=latest.roundId;}
+    if(!id){id=(await request<{roundId:string|null}>('latest')).roundId;}
     if(id!==roundId){
      if(!stopped){
       setRoundId(id);setState(null);setLocalAnswer(null);
-      pendingEntry.current=null;synced.current={offset:0,ready:false,at:0};
+      pendingEntry.current=null;synced.current={offset:0,ready:false,at:0,bestRtt:Infinity};
       setDismissed(null);
       if(!id)onCloseRef.current();
      }
     }else if(!id&&openRef.current&&!stopped){onCloseRef.current();}
-    if(id){if(!completedSnapshot)sent=Date.now();const next=completedSnapshot??await request<Snapshot>('snapshot',{roundId:id});if(!stopped){
+    if(id){
+     // Never make the current question wait for the home listing. That extra
+     // request used to consume several seconds of the next answer window.
+     const sent=Date.now();
+     const latestPromise=request<{roundId:string|null}>('latest').catch(()=>null);
+     const next=await request<Snapshot>('snapshot',{roundId:id});
+     if(!stopped){
      const received=Date.now();
+     const rtt=received-sent;
      const offset=Date.parse(next.serverTime)-(sent+received)/2;
-     if(!synced.current.ready||Math.abs(offset-synced.current.offset)>250) synced.current.offset=offset;
+     if(!synced.current.ready) synced.current.offset=offset;
+     else if(rtt<=synced.current.bestRtt+150)
+      synced.current.offset+=Math.max(-80,Math.min(80,(offset-synced.current.offset)*0.25));
+     synced.current.bestRtt=Math.min(synced.current.bestRtt,rtt);
      synced.current.ready=true;synced.current.at=received;
      setState(next);
      if(next.phase==='question'||next.phase==='result'){
@@ -82,13 +84,18 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
       const untilBoundary=boundary-(received+synced.current.offset);
       nextDelay=untilBoundary<=350?200:Math.min(1000,Math.max(200,untilBoundary+80));
      }
+     void latestPromise.then(latest=>{
+      if(stopped||!latest||!shouldSwitchLiveRound(latest.roundId,id!,next.phase,Date.now(),Date.parse(next.startsAt),dismissed===id))return;
+      setRoundId(latest.roundId);setState(null);setLocalAnswer(null);setDismissed(null);
+      if(!latest.roundId)onCloseRef.current();
+     });
     }}
     if(!stopped)setError('');
    }catch(e){if(!stopped)setError(e instanceof Error?e.message:'Connection unavailable');}
    finally{if(!stopped)timer=setTimeout(poll,nextDelay);}
   }
   void poll();return()=>{stopped=true;clearTimeout(timer);};
- },[roundId,address,resumeCount]);
+ },[roundId,address,resumeCount,dismissed]);
  useEffect(()=>{
   if(!state?.potWallet||state.isRehearsal)return;let stopped=false;
   async function load(){try{const value=await connection.getBalance(new PublicKey(state!.potWallet));if(!stopped)setBalance(value);}catch{if(!stopped)setBalance(null);}}
@@ -112,17 +119,28 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
   finally{setBusy(false);}
  }
  async function answer(choice:number){
-  if(!state||submitting.current||state.phase!=='question'||state.myChoice!==null||!state.joined||state.eliminatedAt!==null)return;
-  const selected={round:state.roundId,index:state.index,choice};
-  submitting.current=true;setLocalAnswer(selected);setBusy(true);setError('');
+  if(!displayState||displayState.phase!=='question'||displayState.myChoice!==null||!displayState.joined||displayState.eliminatedAt!==null)return;
+  const selected={round:displayState.roundId,index:displayState.index,choice};
+  const submissionKey=`${selected.round}:${selected.index}`;
+  if(submitting.current===submissionKey)return;
+  submitting.current=submissionKey;setLocalAnswer(selected);setError('');
+  // Paint the selected option before starting the network request.
+  await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
   try{await request('answer',{roundId:selected.round,index:selected.index,choice});}
   catch(e){setLocalAnswer(current=>current===selected?null:current);setError(e instanceof Error?e.message:'Answer not accepted');}
-  finally{submitting.current=false;setBusy(false);}
+  finally{if(submitting.current===submissionKey)submitting.current=null;}
  }
- const displayedChoice=state?.myChoice??(state&&state.phase==='question'&&localAnswer?.round===state.roundId&&localAnswer.index===state.index?localAnswer.choice:null);
- const stale=!synced.current.ready||Date.now()-synced.current.at>3000;
  const serverNow=Date.now()+synced.current.offset;
- const deadline=state?Date.parse(state.startsAt)+(state.phase==='lobby'?0:state.index*QUESTION_MS+(state.phase==='question'?ANSWER_MS:QUESTION_MS)):0;
+ const projected=state&&synced.current.ready?questionPhase(serverNow,Date.parse(state.startsAt)):null;
+ // The next question is preloaded during the five-second results reveal.
+ // Switch it on-screen at the shared deadline instead of waiting for a new
+ // snapshot to make a round trip over the mobile network.
+ const displayState=state&&projected?.phase==='question'&&state.phase==='result'&&projected.index===state.index+1&&state.nextQuestion
+  ? {...state,phase:'question' as const,index:projected.index,question:state.nextQuestion,nextQuestion:null,counts:undefined,leaders:undefined,myChoice:null}
+  :state;
+ const displayedChoice=displayState?.myChoice??(displayState&&displayState.phase==='question'&&localAnswer?.round===displayState.roundId&&localAnswer.index===displayState.index?localAnswer.choice:null);
+ const stale=!synced.current.ready||Date.now()-synced.current.at>3000;
+ const deadline=displayState?Date.parse(displayState.startsAt)+(displayState.phase==='lobby'?0:displayState.index*QUESTION_MS+(displayState.phase==='question'?ANSWER_MS:QUESTION_MS)):0;
  const remainingMs=Math.max(0,deadline-serverNow);
  const remaining=Math.ceil(remainingMs/1000);
  const visible=open||!!(state&&dismissed!==state.roundId&&shouldTakeOver(state.phase,remaining));
@@ -135,18 +153,18 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
    Alert.alert('Leave the live game?','The game keeps going. Missing an answer means elimination.',[{text:'Stay',style:'cancel'},{text:'Leave',onPress:()=>{setDismissed(state.roundId);onClose();}}]);
   }else{if(state?.phase==='final')setDismissed(state.roundId);onClose();}
  }
- const stage=state&&(state.phase==='question'||state.phase==='result'||state.phase==='lobby'&&remaining<=15);
+ const stage=displayState&&(displayState.phase==='question'||displayState.phase==='result'||displayState.phase==='lobby'&&remaining<=15);
  const watching=state&&(!state.joined||state.eliminatedAt!==null)&&!(state.phase==='result'&&state.eliminatedAt===state.index);
  const background=watching?'#E7E7EF':'#EFE7FF';
 
  if(!visible)return null;
  return <View style={[StyleSheet.absoluteFillObject,{backgroundColor:background,zIndex:100,elevation:20}]}>
   <SafeAreaView style={{flex:1,backgroundColor:background}}><SystemChrome active={visible} color={background}/><StatusBar style="dark"/>
-  {visible&&foreground&&stage&&state ? <GameStage phase={state.phase} index={state.index} seconds={remaining} remainingMs={remainingMs}
-   question={state.question} choice={displayedChoice} counts={state.counts} leaders={state.leaders}
-   alive={state.eliminatedAt===null} joined={state.joined} outcome={resultOutcome(state.joined,state.eliminatedAt,state.index)}
-   disabled={busy||stale||remaining===0||state.phase!=='question'||!state.joined||state.eliminatedAt!==null||displayedChoice!==null}
-   pending={busy} error={error} stale={stale} playerCount={state.playerCount} survivorCount={state.survivorCount} onAnswer={choice=>void answer(choice)} onExit={close}
+  {visible&&foreground&&stage&&displayState ? <GameStage phase={displayState.phase} index={displayState.index} seconds={remaining} remainingMs={remainingMs}
+   question={displayState.question} choice={displayedChoice} counts={displayState.counts} leaders={displayState.leaders}
+   alive={displayState.eliminatedAt===null} joined={displayState.joined} outcome={resultOutcome(displayState.joined,displayState.eliminatedAt,displayState.index)}
+   disabled={!displayState.question||remaining===0||displayState.phase!=='question'||!displayState.joined||displayState.eliminatedAt!==null||displayedChoice!==null}
+   pending={false} error={error} stale={stale} playerCount={displayState.playerCount} survivorCount={displayState.survivorCount} onAnswer={choice=>void answer(choice)} onExit={close}
   /> : visible&&state?.phase==='final'&&state.joined&&state.eliminatedAt===null ? <ScrollView contentContainerStyle={s.page}><Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text><WinnerResult rehearsal={state.isRehearsal} pilot={state.skrPilot} finalists={state.survivorCount} players={state.playerCount} payout={state.payouts?.find(p=>p.wallet===address)} onHome={close}/>{state.recap?<CrowdRecap questions={state.recap}/>:null}</ScrollView> : <ScrollView contentContainerStyle={s.page}>
    <Text style={s.wordmark}>hundo<Text style={{color:'#7047EB'}}>.</Text></Text>
    <Text style={s.tag}>{state?.skrPilot?'LIVE PILOT · 1 SKR':state?.isRehearsal?'LIVE REHEARSAL':'LIVE GAME · DEVNET'}</Text>

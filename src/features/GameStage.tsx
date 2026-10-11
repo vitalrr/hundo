@@ -19,7 +19,7 @@ const purple = '#7047EB', red = '#D72C42', ink = '#202020';
 export function GameStage(p: Props) {
  const [sound, setSound] = useState(true);
  const scale = useRef(new Animated.Value(1)).current;
- const audioState = useRoundAudio(p.phase, p.index, p.seconds, p.outcome, sound && !p.tutorial && !p.stale && p.outcome !== 'spectator');
+ const audioState = useRoundAudio(p.phase, p.index, p.seconds, p.outcome, sound && !p.tutorial && p.outcome !== 'spectator', p.remainingMs);
  useEffect(() => {
   if (p.phase !== 'lobby' && (p.phase !== 'question' || p.seconds > 3)) return;
   scale.setValue(1.08);
@@ -52,7 +52,7 @@ export function GameStage(p: Props) {
     {revealed?<View style={s.answerEnd}><Text style={[s.percent,colored&&s.white]}>{Math.round((p.counts?.[i]??0)/total*100)}%</Text><Text style={[s.mark,colored&&s.white]}>{tone==='majority'?'✓ MOST PICKED':tone==='wrong'?'✕ YOUR PICK':p.choice===i?'YOUR PICK':''}</Text></View>:p.choice===i?<Text style={{color:purple,fontWeight:'900'}}>✓</Text>:null}
    </Pressable>;
   })}
-  {revealed?<View accessibilityLiveRegion="polite" style={[s.result,{backgroundColor:p.outcome==='out'?red:p.outcome==='correct'?purple:'#FFFFFF99'}]}><Text style={[s.resultTitle,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'YOU’RE THROUGH! ↗':p.outcome==='out'?'The crowd surprised you.':'WATCH THE MAJORITY'}</Text><Text style={[s.resultNote,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'You picked the majority.':p.outcome==='out'?(p.choice===null?'No answer in time. Stay and watch.':(p.leaders??[]).includes(p.choice)?'Right pick, but outside the speed cutoff.':(p.question&&p.counts?personalCrowdResult({...p.question,number:p.index,counts:p.counts,myChoice:p.choice}):'Stay and read the crowd.')):'See what the remaining players picked.'}</Text></View>:<Text style={s.locked}>{p.stale?'Reconnecting — answers paused':p.pending?'Sending your answer…':!p.alive||!p.joined?'You’re watching this game':p.choice!==null?'✓ Answer locked':''}</Text>}
+  {revealed?<View accessibilityLiveRegion="polite" style={[s.result,{backgroundColor:p.outcome==='out'?red:p.outcome==='correct'?purple:'#FFFFFF99'}]}><Text style={[s.resultTitle,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'YOU’RE THROUGH! ↗':p.outcome==='out'?'The crowd surprised you.':'WATCH THE MAJORITY'}</Text><Text style={[s.resultNote,p.outcome!=='spectator'&&s.white]}>{p.outcome==='correct'?'You picked the majority.':p.outcome==='out'?(p.choice===null?'No answer in time. Stay and watch.':(p.leaders??[]).includes(p.choice)?'Right pick, but outside the speed cutoff.':(p.question&&p.counts?personalCrowdResult({...p.question,number:p.index,counts:p.counts,myChoice:p.choice}):'Stay and read the crowd.')):'See what the remaining players picked.'}</Text></View>:<Text style={s.locked}>{p.pending?'Sending your answer…':!p.alive||!p.joined?'You’re watching this game':p.choice!==null?'✓ Answer locked':p.stale?'Reconnecting to the room…':''}</Text>}
   {!!p.error&&<Text accessibilityLiveRegion="polite" style={s.error}>{p.error}</Text>}
   {footer}
  </ScrollView>;

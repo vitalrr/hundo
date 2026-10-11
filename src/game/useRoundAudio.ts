@@ -3,9 +3,10 @@ import { AppState, Platform, Vibration } from 'react-native';
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Asset } from 'expo-asset';
 import { audioFileUri } from './audioSource';
+import { countdownOffsetSeconds, phaseCueIsOnTime } from './audioTiming';
 import type { StagePhase } from './presentation';
 
-export function useRoundAudio(phase: StagePhase, index: number, seconds: number, outcome: string, enabled: boolean) {
+export function useRoundAudio(phase: StagePhase, index: number, seconds: number, outcome: string, enabled: boolean, remainingMs = seconds * 1000) {
   const [sources, setSources] = useState<string[]>([]);
   const [loadError, setLoadError] = useState(false);
   useEffect(() => {
@@ -25,8 +26,8 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
   const correct = useAudioPlayer(sources[3] ? {uri: sources[3]} : null);
   const out = useAudioPlayer(sources[4] ? {uri: sources[4]} : null);
   const countdown = useAudioPlayer(sources[5] ? {uri: sources[5]} : null);
-  const secondsRef = useRef(seconds);
-  secondsRef.current = seconds;
+  const remainingRef = useRef(remainingMs);
+  remainingRef.current = remainingMs;
   const tickStatus = useAudioPlayerStatus(tick);
   const startStatus = useAudioPlayerStatus(start);
   const correctStatus = useAudioPlayerStatus(correct);
@@ -42,6 +43,12 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
   }, []);
   const audible = enabled && foreground && ready;
   useEffect(() => {
+    // The last tick/start clip must stop before the result cue. Otherwise it
+    // can sound as if the answer was revealed before it appears on-screen.
+    try { tick.pause(); start.pause(); correct.pause(); out.pause(); } catch {}
+    lastCue.current = '';
+  }, [phase, index]);
+  useEffect(() => {
     // Do not pause on transient isLoaded events: Android emits false when
     // buffering ends, even though the prepared player can keep playing.
     try {
@@ -56,7 +63,7 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
     try {
       if (audible && phase === 'lobby' && sources.length) {
         countdown.volume = .7;
-        void countdown.seekTo(Math.max(0, 15 - secondsRef.current)).then(() => {
+        void countdown.seekTo(countdownOffsetSeconds(remainingRef.current)).then(() => {
           if (!cancelled) countdown.play();
         }).catch(() => {});
       } else countdown.pause();
@@ -72,7 +79,7 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
     const key = countdownTick ? `${phase}:${index}:${seconds}` : `${phase}:${index}:${outcome}`;
     if (key === lastCue.current) return;
     if (!audible) return;
-    const player = countdownTick ? tick : phase === 'question' ? start : phase === 'result' && outcome === 'correct' ? correct : phase === 'result' && outcome === 'out' ? out : null;
+    const player = countdownTick ? tick : phase === 'question' && phaseCueIsOnTime('question', remainingMs) ? start : phase === 'result' && phaseCueIsOnTime('result', remainingMs) && outcome === 'correct' ? correct : phase === 'result' && phaseCueIsOnTime('result', remainingMs) && outcome === 'out' ? out : null;
     const loaded = player === tick ? tickStatus.isLoaded : player === start ? startStatus.isLoaded : player === correct ? correctStatus.isLoaded : outStatus.isLoaded;
     if (!player || !loaded) return;
     lastCue.current = key;
@@ -80,6 +87,6 @@ export function useRoundAudio(phase: StagePhase, index: number, seconds: number,
     if (phase === 'lobby' && seconds === 15 || phase === 'question' && seconds >= 9) Vibration.vibrate(60);
     try { void player.seekTo(0).then(() => { if (!cancelled) { player.volume = .7; player.play(); } }).catch(() => {}); } catch { /* Unavailable player. */ }
     return () => { cancelled = true; };
-  }, [audible, phase, index, seconds, outcome, tick, start, correct, out, tickStatus.isLoaded, startStatus.isLoaded, correctStatus.isLoaded, outStatus.isLoaded]);
+  }, [audible, phase, index, seconds, outcome, remainingMs, tick, start, correct, out, tickStatus.isLoaded, startStatus.isLoaded, correctStatus.isLoaded, outStatus.isLoaded]);
   return loadError ? 'unavailable' : sources.length && pulseStatus.isLoaded ? 'ready' : 'loading';
 }
