@@ -14,9 +14,11 @@ test('zero votes does not manufacture a winner', () => assert.deepEqual(settle([
 test('duplicate identity is rejected', () => assert.throws(() => settle([{ wallet: 'a', choice: 0, receivedAt: 1 }, { wallet: 'a', choice: 1, receivedAt: 2 }])));
 test('15-second answer and 5-second reveal boundaries', () => {
   assert.equal(questionPhase(999, 1000).phase, 'lobby');
+  assert.equal(questionPhase(1000, 1000).remaining, 15_000);
   assert.equal(questionPhase(15999, 1000).phase, 'question');
   assert.equal(questionPhase(16000, 1000).phase, 'result');
   assert.equal(questionPhase(21000, 1000).index, 1);
+  assert.equal(questionPhase(21000, 1000).remaining, 15_000);
   assert.equal(questionPhase(201000, 1000).phase, 'final');
 });
 test('integer payouts conserve pot including remainder and no winners', () => {

@@ -150,12 +150,14 @@ Deno.serve(async req => {
     if (body.action === 'snapshot') {
       const { data, error } = await db.rpc('hundo_snapshot', { p_round: roundId, p_wallet: wallet }); check(error);
       const { data: round, error: roundError } = await db.from('hundo_rounds').select('is_rehearsal').eq('id', roundId).single(); check(roundError);
-      // Everyone can preload the upcoming question during the same five-second
-      // reveal. Keep it off the screen until the server's next question starts.
+      // Everyone can preload a question in the five seconds before it starts.
+      // Keep it off the screen until the shared server deadline.
       let nextQuestion = null;
-      if (data?.phase === 'result' && data.index < 9) {
+      const prelude = data?.phase === 'lobby' && Date.parse(data.startsAt) - Date.parse(data.serverTime) <= 5000;
+      const nextNumber = prelude ? 0 : data?.phase === 'result' && data.index < 9 ? data.index + 1 : null;
+      if (nextNumber !== null) {
         const { data: upcoming, error: upcomingError } = await db.from('hundo_questions')
-          .select('text,options').eq('round_id', roundId).eq('number', data.index + 1).single();
+          .select('text,options').eq('round_id', roundId).eq('number', nextNumber).single();
         check(upcomingError);
         nextQuestion = upcoming;
       }

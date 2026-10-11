@@ -132,11 +132,16 @@ export function LiveRound({address,open,onClose,onTakeOver,onVisibilityChange}:{
  }
  const serverNow=Date.now()+synced.current.offset;
  const projected=state&&synced.current.ready?questionPhase(serverNow,Date.parse(state.startsAt)):null;
- // The next question is preloaded during the five-second results reveal.
+ // The next question is preloaded during the final seconds of the lobby or
+ // the five-second results reveal.
  // Switch it on-screen at the shared deadline instead of waiting for a new
  // snapshot to make a round trip over the mobile network.
- const displayState=state&&projected?.phase==='question'&&state.phase==='result'&&projected.index===state.index+1&&state.nextQuestion
-  ? {...state,phase:'question' as const,index:projected.index,question:state.nextQuestion,nextQuestion:null,counts:undefined,leaders:undefined,myChoice:null}
+ const preloaded=state&&state.nextQuestion&&projected?.phase==='question'&&(
+  state.phase==='lobby'&&projected.index===0 ||
+  state.phase==='result'&&projected.index===state.index+1
+ );
+ const displayState=preloaded
+  ? {...state,phase:'question' as const,index:projected!.index,question:state!.nextQuestion!,nextQuestion:null,counts:undefined,leaders:undefined,myChoice:null}
   :state;
  const displayedChoice=displayState?.myChoice??(displayState&&displayState.phase==='question'&&localAnswer?.round===displayState.roundId&&localAnswer.index===displayState.index?localAnswer.choice:null);
  const stale=!synced.current.ready||Date.now()-synced.current.at>3000;
