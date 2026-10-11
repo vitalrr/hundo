@@ -5,8 +5,13 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const roundId = process.argv[2];
+const role = process.argv[3] || 'all-a';
 if (!/^[0-9a-f-]{36}$/i.test(roundId || '')) {
- console.error('Usage: node scripts/rehearsal-player.cjs ROUND_UUID');
+ console.error('Usage: node scripts/rehearsal-player.cjs ROUND_UUID [all-a|support|dissent]');
+ process.exit(1);
+}
+if (!['all-a', 'support', 'dissent'].includes(role)) {
+ console.error('Role must be all-a, support, or dissent.');
  process.exit(1);
 }
 const env = Object.fromEntries(fs.readFileSync('.env','utf8').split('\n').filter(l=>l.includes('=')).map(l=>{const i=l.indexOf('=');return [l.slice(0,i),l.slice(i+1)];}));
@@ -34,8 +39,8 @@ async function main() {
  token = (await call('authenticate',{id:challenge.id,signedMessage:signature})).token;
  await call('join-rehearsal',{roundId});
  await call('join-rehearsal',{roundId}); // An identical retry must preserve the same registration.
- console.log(`Simulated player joined ${roundId}. Wallet: ${wallet}`);
- console.log('Chooses option A on every question. With two players, different choices tie and both advance.');
+ console.log(`Simulated ${role} player joined ${roundId}. Wallet: ${wallet}`);
+ console.log(role === 'all-a' ? 'Chooses A on all ten questions.' : role === 'support' ? 'Chooses A on questions 1–9, then abstains so a real player can be the sole finalist.' : 'Chooses B on question 1, then abstains to demonstrate elimination.');
  const stopAt = Date.now()+Math.max(0,Date.parse(home.round.startsAt)-Date.parse(home.serverTime))+210000;
  let lastPhase='', failures=0;
  const answered = new Set();
@@ -50,8 +55,9 @@ async function main() {
    }
    if(state.phase==='question') {
     assert.equal(state.counts,undefined,'Voting totals must stay hidden until reveal');
-    if(state.eliminatedAt===null && state.myChoice===null && !answered.has(state.index)) {
-     await call('answer',{roundId,index:state.index,choice:0});
+    const shouldAnswer = role === 'all-a' || role === 'support' && state.index < 9 || role === 'dissent' && state.index === 0;
+    if(shouldAnswer && state.eliminatedAt===null && state.myChoice===null && !answered.has(state.index)) {
+     await call('answer',{roundId,index:state.index,choice:role === 'dissent' ? 1 : 0});
      answered.add(state.index);
     }
    }
