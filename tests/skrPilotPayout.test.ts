@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite';
 
 const require = createRequire(import.meta.url);
 const { Keypair, PublicKey, Transaction, TransactionInstruction } = require('@solana/web3.js');
-const { ata, createAtaInstruction, transferCheckedInstruction, readTokenAmount, verifiedSoleFinalist, validatedSignedBytes } = require('../scripts/skr-pilot-payout.cjs');
+const { ata, createAtaInstruction, transferCheckedInstruction, readTokenAmount, verifiedSoleFinalist, validatedSignedBytes, automaticPayoutFlow } = require('../scripts/skr-pilot-payout.cjs');
 
 const treasury = new PublicKey('FRSmMsMYtb69CcCniKP97ANS1u5ukkTYoYgATm4w4L2y');
 const winner = new PublicKey('GhSaDCrTNbXwLWPXzzEVqWYVwMfNocUMqNG3BTkzDU9Z');
@@ -80,6 +80,46 @@ test('pilot only prepares payment to the sole settled finalist', async () => {
     if (originalKey === undefined) delete process.env.HUNDO_SUPABASE_SERVICE_ROLE_KEY;
     else process.env.HUNDO_SUPABASE_SERVICE_ROLE_KEY = originalKey;
   }
+});
+
+test('automatic pilot waits for final, then submits and verifies one saved payment', async () => {
+  let now = 0, prepares = 0, sends = 0, checks = 0;
+  const events: string[] = [];
+  await automaticPayoutFlow({
+    deadline: 200_000,
+    now: () => now,
+    pause: async (ms: number) => { now += ms; },
+    preparePayment: async () => {
+      assert.ok(now >= 200_000, 'never prepare before the last result');
+      events.push('prepare');
+      if (++prepares === 1) throw new Error('Round must be a finished, zero-SOL rehearsal before the pilot prize can be prepared.');
+    },
+    sendPayment: async () => { events.push('send'); sends++; },
+    verifyPayment: async () => {
+      events.push('verify');
+      if (++checks < 3) throw new Error('Transaction is not finalized successfully yet.');
+    },
+  });
+  assert.equal(now, 203_000);
+  assert.equal(sends, 1);
+  assert.deepEqual(events, ['prepare', 'prepare', 'send', 'verify', 'verify', 'verify']);
+});
+
+test('automatic pilot never broadcasts for the wrong finalist or an expired payment', async () => {
+  let sends = 0;
+  await assert.rejects(automaticPayoutFlow({
+    deadline: 0, now: () => 0, pause: async () => {},
+    preparePayment: async () => { throw new Error('The recipient must be the sole finalist recorded by the game server.'); },
+    sendPayment: async () => { sends++; }, verifyPayment: async () => {},
+  }), /sole finalist/);
+  assert.equal(sends, 0);
+  await assert.rejects(automaticPayoutFlow({
+    deadline: 0, now: () => 0, pause: async () => {},
+    preparePayment: async () => {},
+    sendPayment: async () => { sends++; throw new Error('Prepared blockhash expired.'); },
+    verifyPayment: async () => {},
+  }), /expired/);
+  assert.equal(sends, 1, 'never sign or retry an expired payment');
 });
 
 test('pilot database permits only one private, exact 1 SKR prize record', async () => {

@@ -18,6 +18,7 @@ const MEMO_PROGRAM = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
 const DECIMALS = 6;
 const ONE_SKR = 1_000_000n;
 const SOL_BUFFER = 1_000_000; // additional 0.001 SOL after rent and fee
+const PILOT_WINNER = new PublicKey('GhSaDCrTNbXwLWPXzzEVqWYVwMfNocUMqNG3BTkzDU9Z');
 const ROUND_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function privateDirectory() {
@@ -336,6 +337,68 @@ async function verify(directory, roundId) {
   console.log(JSON.stringify({ status: 'confirmed', roundId, recipient: receipt.recipient, amount: '1 SKR', signature: receipt.signature, explorer: `https://explorer.solana.com/tx/${receipt.signature}` }, null, 2));
 }
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// The watcher is started only for an explicitly announced video round. It never
+// chooses a winner or amount: prepare and send recheck the sole finalist and
+// the signed transaction is limited to one official SKR.
+async function automaticPayoutFlow({ deadline, preparePayment, sendPayment, verifyPayment, now = Date.now, pause = sleep }) {
+  await pause(Math.max(0, deadline - now()));
+  const prepareCutoff = deadline + 45_000;
+  for (;;) {
+    try { await preparePayment(); break; }
+    catch (error) {
+      if (!/Round must be a finished|Round has not reached its final screen/.test(error.message) || now() >= prepareCutoff) throw error;
+      await pause(1000);
+    }
+  }
+  // Retrying send reuses the saved signed transaction; it never creates a new payment.
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { await sendPayment(); break; }
+    catch (error) {
+      if (attempt === 2 || /expired|wrong|differs|not the sole finalist/i.test(error.message)) throw error;
+      await pause(1000);
+    }
+  }
+  const verifyCutoff = now() + 90_000;
+  for (;;) {
+    try { await verifyPayment(); return; }
+    catch (error) {
+      if (error.message !== 'Transaction is not finalized successfully yet.' || now() >= verifyCutoff) throw error;
+      await pause(1000);
+    }
+  }
+}
+
+async function auto(directory, roundId) {
+  if (!ROUND_ID.test(roundId)) throw new Error('Provide a valid round UUID.');
+  const wallet = treasury(directory);
+  const pilot = await pilotRecord(roundId);
+  if (pilot.treasury_wallet !== wallet.publicKey.toBase58()) throw new Error('Pilot treasury does not match the private key.');
+  if (pilot.winner_wallet && pilot.winner_wallet !== PILOT_WINNER.toBase58()) throw new Error('Pilot has a different recipient.');
+  if (pilot.status === 'confirmed') { console.log('Pilot payment already confirmed.'); return; }
+  const rounds = await databaseRequest(`hundo_rounds?select=id,starts_at,is_rehearsal,pot_lamports&id=eq.${roundId}`);
+  const round = rounds?.[0];
+  if (!round || !round.is_rehearsal || String(round.pot_lamports) !== '0') throw new Error('Pilot round is missing or not a zero-SOL rehearsal.');
+  const deadline = Date.parse(round.starts_at) + 200_000;
+  if (!Number.isFinite(deadline)) throw new Error('Pilot round has an invalid start time.');
+  const connection = await checkedConnection();
+  const [source, sol, rent] = await Promise.all([
+    connection.getAccountInfo(ata(wallet.publicKey)), connection.getBalance(wallet.publicKey),
+    connection.getMinimumBalanceForRentExemption(165),
+  ]);
+  if (readTokenAmount(source, wallet.publicKey) < ONE_SKR || sol < rent + SOL_BUFFER + 20_000) {
+    throw new Error('Fund the treasury with at least 1 SKR and enough Mainnet SOL before starting the payout watcher.');
+  }
+  console.log(JSON.stringify({ status: 'watching', roundId, recipient: PILOT_WINNER.toBase58(), amount: '1 SKR', earliestPayment: new Date(deadline).toISOString() }));
+  await automaticPayoutFlow({
+    deadline,
+    preparePayment: () => prepare(directory, roundId, PILOT_WINNER.toBase58()),
+    sendPayment: () => send(directory, roundId),
+    verifyPayment: () => verify(directory, roundId),
+  });
+}
+
 async function main() {
   const directory = privateDirectory();
   const [command, roundId, recipient] = process.argv.slice(2);
@@ -344,8 +407,9 @@ async function main() {
   if (command === 'prepare' && roundId && recipient) return prepare(directory, roundId, recipient);
   if (command === 'send' && roundId && !recipient) return send(directory, roundId);
   if (command === 'verify' && roundId && !recipient) return verify(directory, roundId);
-  throw new Error('Usage: skr-pilot-payout.cjs status | announce ROUND_UUID | prepare ROUND_UUID WINNER_WALLET | send ROUND_UUID | verify ROUND_UUID');
+  if (command === 'auto' && roundId && !recipient) return auto(directory, roundId);
+  throw new Error('Usage: skr-pilot-payout.cjs status | announce ROUND_UUID | auto ROUND_UUID | prepare ROUND_UUID WINNER_WALLET | send ROUND_UUID | verify ROUND_UUID');
 }
 
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
-module.exports = { ata, createAtaInstruction, transferCheckedInstruction, readTokenAmount, verifiedSoleFinalist, validatedSignedBytes };
+module.exports = { ata, createAtaInstruction, transferCheckedInstruction, readTokenAmount, verifiedSoleFinalist, validatedSignedBytes, automaticPayoutFlow };
