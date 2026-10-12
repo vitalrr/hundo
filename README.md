@@ -6,7 +6,7 @@
 
 **[Download the Android APK (v0.2.12)](https://github.com/vitalrr/hundo/releases/download/v0.2.12/hundo-0.2.12.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.12) · [Pilot and transaction evidence](docs/skr-pilot.md)
 
-On 12 October 2026, a [57-participant pilot](docs/skr-pilot.md) completed ten questions. One player used a physical Seeker; the other 56 participants were scripted. The Seeker player was the sole finalist and received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG).
+On 12 October 2026, a [57-participant pilot round](docs/skr-pilot.md) completed ten questions. One finalist received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG). The linked pilot record describes the participants and payout process.
 
 The APK is a test-signed competition build. It installs directly on a compatible Android phone; the phone does not need to share Wi-Fi with the developer's Mac. The offline **See how it works** demo can be explored without a wallet. A live room requires internet and an Android wallet that supports Solana Mobile Wallet Adapter. The physical-device test used a Solana Seeker.
 

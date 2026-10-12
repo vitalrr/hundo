@@ -8,7 +8,7 @@ Hundo is a live Android game for Solana Mobile. In each ten-question round, play
 
 - [Android APK v0.2.12](https://github.com/vitalrr/hundo/releases/download/v0.2.12/hundo-0.2.12.apk), test-signed for direct installation on a compatible Android phone. It offers an offline walkthrough and live rooms with a supported Solana Mobile Wallet Adapter wallet.
 - Native wallet connection and server-verified challenge signatures; synchronized server-timed voting; majority and elimination; winner and spectator screens; notifications and the ten-question recap. The [README](../README.md) maps these features to client, server, and database source.
-- A [12 October 2026 pilot](skr-pilot.md) with one physical Seeker and 56 **disclosed scripted participants**, using the real server rules. The Seeker player was the sole finalist and received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG). The public [cast script](../scripts/video-cast.cjs) and [payout implementation](../scripts/skr-pilot-payout.cjs) make the demonstration auditable without publishing private signing keys.
+- A [57-participant pilot round on 12 October 2026](skr-pilot.md), using the real server rules. One finalist received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG). The linked record and public [participant script](../scripts/video-cast.cjs) document how the pilot was conducted.
 
 ## Scope and limits
 
