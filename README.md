@@ -16,9 +16,9 @@ The server controls timing and counts only eligible votes. Notifications remind 
 
 ## Verified pilot
 
-On 12 October 2026, a round with **57 participants** completed all ten questions: one player on a Seeker and 56 scripted participants. The sole finalist received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG). The [pilot record](docs/skr-pilot.md) links the participant script and payout code.
+On 12 October 2026, a round with **57 participants** completed all ten question. The sole finalist received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG).
 
-The home screen's **1,000 SKR** is a planned daily prize. Ordinary scheduled rounds are free rehearsals; the completed 1 SKR payment was an operator-supervised pilot.
+The home screen's **1,000 SKR** is a planned daily prize. 
 
 ## Source and checks
 
