@@ -1,5 +1,7 @@
 # hundo infrastructure
 
+This is the initial September 18 deployment record. Current gameplay and Mainnet payout evidence are summarized in the [README](../README.md) and [October pilot record](skr-pilot.md).
+
 Supabase organization: hundo (Free)
 Project ref: sqjrlbuxmwcvaltiwrgx
 Project URL: https://sqjrlbuxmwcvaltiwrgx.supabase.co
