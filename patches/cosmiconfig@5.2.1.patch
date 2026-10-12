@@ -1,0 +1,12 @@
+diff --git a/dist/loaders.js b/dist/loaders.js
+--- a/dist/loaders.js
++++ b/dist/loaders.js
+@@ -20,7 +20,7 @@
+ }
+ 
+ function loadYaml(filepath        , content        )         {
+-  return yaml.safeLoad(content, { filename: filepath });
++  return yaml.load(content, { filename: filepath });
+ }
+ 
+ module.exports = {

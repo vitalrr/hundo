@@ -17,9 +17,13 @@ The six priority findings were checked against the installed packages, resolved 
 
 The old versions still appear as override **selectors** at the top of `pnpm-lock.yaml`; the right-hand versions and resolved package entries are the installed replacements. All ten dependency entries in the platform report are absent from the fresh `pnpm audit` findings.
 
-Fresh `pnpm audit --json` result: **0 critical, 2 high, 1 moderate**. The remaining advisories are `node-forge`, `braces` and `sprintf-js`, each with a checked-in local mitigation and passing regression tests as described below. npm currently lists no advisory-fixed release for those three; the scanner still reports their package versions. This result is not a zero-finding audit.
+Fresh `pnpm audit --json` result: **0 critical, 2 high, 0 moderate**. The remaining advisories are `node-forge` and `braces`, each with a checked-in local mitigation and passing regression tests as described below. The registry still lists 1.4.0 and 3.0.3 as their latest releases, and the [node-forge advisory](https://github.com/advisories/GHSA-86w9-cpqp-85rv) and [braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) list no fixed release. This result is not a zero-finding audit; no advisory is suppressed or hidden by renaming a package.
 
-Validation: TypeScript passed; **43 tests passed**, including database authorization, the existing security patches and four client-configuration checks; Android bundle export passed. A targeted scan of **786 historical Git blobs** and the published v0.2.12 APK found no Supabase secret key, service-role JWT or PEM private-key material. This is a targeted credential check, not an exhaustive secret scanner. APK SHA-256: `863cdc06e9845ad48c49b4cae22a4969a3752ac793af4df871805a2dc1af8c9c`.
+Validation: frozen-lockfile installation and TypeScript passed; **44 tests passed**, including database authorization, security patches, client-configuration checks, and YAML compatibility; Android bundle export passed. A targeted scan of **786 historical Git blobs** and the published v0.2.12 APK found no Supabase secret key, service-role JWT or PEM private-key material. This is a targeted credential check, not an exhaustive secret scanner. APK SHA-256: `863cdc06e9845ad48c49b4cae22a4969a3752ac793af4df871805a2dc1af8c9c`.
+
+### Removed the last moderate dependency finding
+
+Updated the legacy `js-yaml@3.15.2` dependency to 4.3.2, removing `argparse@1.0.10` and `sprintf-js` entirely from the resolved lockfile. The old sprintf precision patch is no longer needed. A one-line Cosmiconfig compatibility patch uses `yaml.load`, the safe default in YAML v4, instead of the removed `safeLoad` API. Tests exercise Metro's YAML loader, reject executable YAML tags, and verify coverage configuration and the YAML command-line tool. Wallet dependencies are unchanged. This is a build-tool update in the source repository, not a replacement of the published APK.
 
 ### Client key analysis and build protection
 

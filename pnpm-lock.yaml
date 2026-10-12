@@ -9,6 +9,7 @@ overrides:
   ajv@8.11.0: 8.20.0
   decode-uri-component@0.2.2: 0.5.0
   image-size@1.2.1: 2.0.4
+  js-yaml@3.15.2: 4.3.2
   postcss@8.4.49: 8.5.29
   shell-quote@1.10.0: 1.12.0
   source-map-js@1.2.1: 1.2.2
@@ -20,11 +21,11 @@ overrides:
 patchedDependencies:
   '@expo/cli@0.22.28': 0394e6f744f9223831c837736361a2ce87fed6962b1437e64a778d11b9b6e189
   braces@3.0.3: ebf4f7f1411f753f799882565ac4be72f386f439624f09076a0889c8bc457345
+  cosmiconfig@5.2.1: 54c283f999dcc1b6782002e56a7b33a12243d9da220ee93b9eeeab212838d97c
   jayson@4.3.0: e23f5eb788443bebdf4133e5d7bc6784747b892857f68397ba6a04b6b8df10b6
   metro@0.81.5: 6c1e3548e2d42c370a86a4708b3c574b1be6026eff59ed6f388f6bb7da04c6a4
   node-forge@1.4.0: 575eaba8f4d2d50d4977e9257ad080290c4040069be744fd4faedb7cc845c433
   query-string@7.1.3: 8cf93ecf8b1c3d495bed8d4e8e723569a358e9da0615fb1fbee180f1f41fc33d
-  sprintf-js@1.0.3: c66369bcc00e76e60c30c6982cdfff12874d10cf8b9861232ffb4d97d7b6a8d1
 
 importers:
 
@@ -1591,9 +1592,6 @@ packages:
   arg@5.0.2:
     resolution: {integrity: sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==}
 
-  argparse@1.0.10:
-    resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
-
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
@@ -2912,10 +2910,6 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@3.15.2:
-    resolution: {integrity: sha512-6EuL879VkRA+1Cz578mKMiKvjPNEuk6+r1JaFzoSWejZmtf7xWbIyw1e3KkxlkzTIt9Taw6JBhEppG7utc1P+w==}
-    hasBin: true
-
   js-yaml@4.3.2:
     resolution: {integrity: sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==}
     hasBin: true
@@ -3864,9 +3858,6 @@ packages:
   split-on-first@1.1.0:
     resolution: {integrity: sha512-43ZssAJaMusuKWL8sKUBQXHWOpq8d6CfN/u1p4gUzfJkM05C8rxTmYrkIPTXapZpORA6LkkzcUulJ8FqA7Uudw==}
     engines: {node: '>=6'}
-
-  sprintf-js@1.0.3:
-    resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
 
   ssri@10.0.6:
     resolution: {integrity: sha512-MGrFH9Z4NP9Iyhqn16sDtBpRRNJ0Y2hNa6D65h736fVSaPCHr4DM4sWUNvVaSuC+0OBGhwsrydQwmgfg5LncqQ==}
@@ -5610,7 +5601,7 @@ snapshots:
       camelcase: 5.3.1
       find-up: 4.1.0
       get-package-type: 0.1.0
-      js-yaml: 3.15.2
+      js-yaml: 4.3.2
       resolve-from: 5.0.0
 
   '@istanbuljs/schema@0.1.6': {}
@@ -6407,10 +6398,6 @@ snapshots:
 
   arg@5.0.2: {}
 
-  argparse@1.0.10:
-    dependencies:
-      sprintf-js: 1.0.3(patch_hash=c66369bcc00e76e60c30c6982cdfff12874d10cf8b9861232ffb4d97d7b6a8d1)
-
   argparse@2.0.1: {}
 
   array-union@2.1.0: {}
@@ -6879,11 +6866,11 @@ snapshots:
     dependencies:
       browserslist: 4.29.0
 
-  cosmiconfig@5.2.1:
+  cosmiconfig@5.2.1(patch_hash=54c283f999dcc1b6782002e56a7b33a12243d9da220ee93b9eeeab212838d97c):
     dependencies:
       import-fresh: 2.0.0
       is-directory: 0.3.1
-      js-yaml: 3.15.2
+      js-yaml: 4.3.2
       parse-json: 4.0.0
 
   cross-fetch@3.2.0:
@@ -7899,11 +7886,6 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@3.15.2:
-    dependencies:
-      argparse: 1.0.10
-      esprima: 4.0.1
-
   js-yaml@4.3.2:
     dependencies:
       argparse: 2.0.1
@@ -8118,7 +8100,7 @@ snapshots:
   metro-config@0.81.5(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@6.0.6):
     dependencies:
       connect: 3.7.0(supports-color@8.1.1)
-      cosmiconfig: 5.2.1
+      cosmiconfig: 5.2.1(patch_hash=54c283f999dcc1b6782002e56a7b33a12243d9da220ee93b9eeeab212838d97c)
       flow-enums-runtime: 0.0.6
       jest-validate: 29.7.0
       metro: 0.81.5(patch_hash=6c1e3548e2d42c370a86a4708b3c574b1be6026eff59ed6f388f6bb7da04c6a4)(bufferutil@4.1.0)(supports-color@8.1.1)(utf-8-validate@6.0.6)
@@ -8952,8 +8934,6 @@ snapshots:
   source-map@0.6.1: {}
 
   split-on-first@1.1.0: {}
-
-  sprintf-js@1.0.3(patch_hash=c66369bcc00e76e60c30c6982cdfff12874d10cf8b9861232ffb4d97d7b6a8d1): {}
 
   ssri@10.0.6:
     dependencies:

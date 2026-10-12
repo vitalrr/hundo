@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { Readable } from 'node:stream';
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const require = createRequire(import.meta.url);
 
@@ -26,10 +30,37 @@ test('Jayson request IDs and streaming RPC parsing work with updated dependencie
   assert.deepEqual(parsed, request);
 });
 
-test('patched sprintf-js bounds numeric precision', () => {
-  const { sprintf } = require('sprintf-js');
-  assert.equal(sprintf('%.2f', 1.25), '1.25');
-  for (const format of ['%.999999f', '%.999999e', '%.999999g']) {
-    assert.ok(sprintf(format, 1.25).length < 200);
+test('updated YAML loads Metro configuration and rejects executable YAML tags', () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'hundo-yaml-'));
+  const file = join(cwd, 'metro.config.yaml');
+  try {
+    writeFileSync(file, 'watchFolders: [src]\nresetCache: false\nmaxWorkers: 2\n');
+    const explorer = require('cosmiconfig')('metro', { cache: false });
+    assert.deepEqual(explorer.loadSync(file).config, {
+      watchFolders: ['src'], resetCache: false, maxWorkers: 2
+    });
+    writeFileSync(file, 'unsafe: !!js/function "function () { return 1; }"\n');
+    assert.throws(() => explorer.loadSync(file), /unknown tag/);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('updated YAML preserves coverage configuration and CLI without sprintf-js', async () => {
+  const cwd = mkdtempSync(join(tmpdir(), 'hundo-nyc-'));
+  try {
+    writeFileSync(join(cwd, 'package.json'), '{}');
+    const file = join(cwd, '.nycrc.yaml');
+    writeFileSync(file, 'all: true\ninclude: [src/**/*.ts]\nreporter: [text]\n');
+    const { loadNycConfig } = require('@istanbuljs/load-nyc-config');
+    const config = await loadNycConfig({ cwd, nycrcPath: file });
+    assert.equal(config.all, true);
+    assert.deepEqual(config.include, ['src/**/*.ts']);
+    const cli = join(dirname(require.resolve('js-yaml/package.json')), 'bin/js-yaml.js');
+    const result = execFileSync(process.execPath, [cli, file], { encoding: 'utf8' });
+    assert.deepEqual(JSON.parse(result), { all: true, include: ['src/**/*.ts'], reporter: ['text'] });
+    assert.doesNotMatch(readFileSync(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8'), /sprintf-js|argparse@1\./);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
   }
 });
