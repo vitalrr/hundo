@@ -50,7 +50,7 @@ test('guest push survives wallet disconnect and rejects another installation sec
  try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;');
   await db.exec(await readFile(new URL('../supabase/migrations/202609210002_push.sql',import.meta.url),'utf8'));
-  await db.exec(await readFile(new URL('../supabase/migrations/202610120001_guest_push.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610120002_guest_push.sql',import.meta.url),'utf8'));
   const id='10000000-0000-4000-8000-000000000001';
   const secret='a'.repeat(64);
   const stolen='b'.repeat(64);
@@ -75,7 +75,7 @@ test('existing wallet push registration can migrate using its original token',as
   await db.exec(await readFile(new URL('../supabase/migrations/202609210002_push.sql',import.meta.url),'utf8'));
   const id='20000000-0000-4000-8000-000000000002';
   await db.query('select hundo_register_push($1,$2,$3)',['alice',id,'notification-token-for-old-wallet']);
-  await db.exec(await readFile(new URL('../supabase/migrations/202610120001_guest_push.sql',import.meta.url),'utf8'));
+  await db.exec(await readFile(new URL('../supabase/migrations/202610120002_guest_push.sql',import.meta.url),'utf8'));
   await assert.rejects(db.query('select hundo_register_guest_push($1,$2,$3)',[id,'a'.repeat(64),'notification-token-for-other-phone']),/Legacy token mismatch/);
   await db.query('select hundo_register_guest_push($1,$2,$3)',[id,'a'.repeat(64),'notification-token-for-old-wallet']);
   const row=(await db.query<{wallet:string|null,secret_hash:string,enabled:boolean}>('select wallet,secret_hash,enabled from hundo_push_devices where installation_id=$1',[id])).rows[0];

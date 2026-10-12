@@ -35,4 +35,4 @@ The site's “leaked secret” finding points at `EXPO_PUBLIC_SUPABASE_PUBLISHAB
 
 ## Release limits
 
-This APK is a test-signed competition build. The daily rooms are free rehearsals with no live SKR payout. Security of a real prize wallet, payout executor, and production anti-bot controls has not been established.
+The v0.2.12 APK is a test-signed competition build. Ordinary daily rooms are free rehearsals. A separate, operator-supervised [1 SKR Mainnet pilot](skr-pilot.md) completed on 12 October 2026, with a public transaction receipt. This does not establish the security of an automated daily prize service, independent wallet custody, or production anti-bot controls. The version-based scanner findings described above still need upstream fixes and a fresh audit before production.
