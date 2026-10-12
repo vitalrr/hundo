@@ -82,6 +82,25 @@ Deno.serve(async req => {
       const { error: sessionError } = await db.from('hundo_sessions').insert({ token_hash: await hash(token), wallet: challenge.wallet }); check(sessionError);
       return json({ token });
     }
+    // Push belongs to this installation, not to a wallet session. The random
+    // device secret stays on the phone and authorizes opt-out and token refresh.
+    if ((body.action === 'push-register' || body.action === 'push-disable' || body.action === 'push-status') && body.deviceSecret !== undefined) {
+      const installation = uuid(body.installationId);
+      if (typeof body.deviceSecret !== 'string' || !/^[a-f0-9]{64}$/.test(body.deviceSecret)) return json({ error: 'Invalid device credentials' }, 400);
+      const secretHash = await hash(body.deviceSecret);
+      if (body.action === 'push-register') {
+        if (typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096 || /\s/.test(body.token)) return json({ error: 'Invalid notification token' }, 400);
+        const { error } = await db.rpc('hundo_register_guest_push', { p_installation: installation, p_secret_hash: secretHash, p_token: body.token });
+        if (error) return json({ error: 'Could not enable reminders on this installation.' }, 409);
+        return json({ enabled: true });
+      }
+      if (body.action === 'push-disable') {
+        const { data, error } = await db.rpc('hundo_disable_guest_push', { p_installation: installation, p_secret_hash: secretHash }); check(error);
+        return data ? json({ enabled: false }) : json({ error: 'Device credentials do not match' }, 403);
+      }
+      const { data, error } = await db.from('hundo_push_devices').select('enabled').eq('installation_id', installation).eq('secret_hash', secretHash).maybeSingle(); check(error);
+      return json({ enabled: data?.enabled ?? false });
+    }
     const token = req.headers.get('X-Hundo-Session') || '';
     if (!/^[a-f0-9]{64}$/.test(token)) return json({ error: 'Подключи кошелёк заново' }, 401);
     const sessionHash = await hash(token);
@@ -102,6 +121,8 @@ Deno.serve(async req => {
       const { data, error } = await db.rpc('hundo_games_played', { p_wallet: wallet }); check(error);
       return json({ gamesPlayed: data ?? 0 });
     }
+    // Older APKs still register reminders with a wallet session. Keep these
+    // routes while installed copies are upgraded to installation credentials.
     if (body.action === 'push-register') {
       const installation = uuid(body.installationId);
       if (typeof body.token !== 'string' || body.token.length < 20 || body.token.length > 4096 || /\s/.test(body.token)) return json({ error: 'Invalid notification token' }, 400);

@@ -17,7 +17,7 @@ The scheduled rounds in the current competition build are **free, zero-prize reh
 1. Connect a wallet, join the room, and wait for the synchronized start.
 2. Answer each of ten questions within **15 seconds**. Answers stay hidden from other players until the timer closes.
 3. See the vote split for **5 seconds**. Every option tied for the lead counts as a winning answer. Players who miss or choose another option become spectators.
-4. Finalists see the result; all players can inspect the ten-question crowd recap. Push reminders can be enabled for 15 and 5 minutes before a round, plus a recap notification afterward.
+4. Finalists see the result; anyone with the app can inspect the ten-question crowd recap. After Android notification permission is granted, the installation receives reminders 15 and 5 minutes before a round and a recap notification afterward, even without a connected wallet.
 
 The **server**, not the phone clock, accepts answers and settles each question. A configurable survivor cap can use server receipt time to break a large group of surviving players; network latency therefore affects a speed cutoff.
 
