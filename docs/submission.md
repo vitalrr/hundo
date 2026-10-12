@@ -12,7 +12,7 @@ Hundo is a live Android game for Solana Mobile. In each ten-question round, play
 
 ## Scope and limits
 
-The demonstrated Mainnet payout is **real**, but it is an operator-supervised, explicitly announced 1 SKR pilot. The ordinary scheduled rounds are free rehearsals and send no prizes. The home screen's **1,000 SKR** is labeled as a planned daily prize, not a funded offer. The pilot does not prove 57 human participants, production load, automated daily SKR payout, escrow, or anti-bot protection. The APK is not a dApp Store release. See [security findings and local mitigations](security-audit.md).
+The demonstrated Mainnet payout is **real**. It was made in an operator-supervised 1 SKR pilot; ordinary scheduled rounds are free rehearsals and send no prizes. The home screen's **1,000 SKR** is a planned daily prize, not a funded offer. Production load, automatic daily payouts and anti-bot protection remain future work. The APK is not a dApp Store release. See [security findings and local mitigations](security-audit.md).
 
 ## What to provide to reviewers
 
