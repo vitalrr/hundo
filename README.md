@@ -30,7 +30,7 @@ The home screen's **1,000 SKR** is a planned daily prize.
 | Notifications | [notify function](supabase/functions/notify/index.ts), [setup](docs/push-setup.md) |
 | Pilot reward | [payout tool](scripts/skr-pilot-payout.cjs), [57-participant test](tests/videoCast.test.ts) |
 
-The app uses React Native/Expo and Supabase. Wallet login uses a server-verified signature; the server settles each question after its deadline. The source includes the Android app, backend, database rules and 39 passing automated tests.
+The app uses React Native/Expo and Supabase. Wallet login uses a server-verified signature; the server settles each question after its deadline. The source includes the Android app, backend, database rules and 43 passing automated tests. [Security verification](docs/security-audit.md) maps the platform's historical findings to the current code.
 
 ## Build
 

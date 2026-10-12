@@ -1,6 +1,9 @@
 import { serverErrorMessage } from './errors';
 
 export const API_URL = process.env.EXPO_PUBLIC_GAME_API_URL ?? '';
+// Public client identifier, not a server secret. app.config.js rejects privileged
+// credentials before bundling. Requests still require server-side authorization.
+// https://supabase.com/docs/guides/api/api-keys
 const PUBLIC_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 let session = '';
 export function setSession(value: string) { session = value; }

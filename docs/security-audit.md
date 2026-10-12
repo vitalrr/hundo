@@ -1,4 +1,33 @@
-# Security audit follow-up (9 October 2026)
+# Security audit follow-up
+
+## Verified again — 12 October 2026
+
+The competition platform's **18-finding report is pinned to commit `0d0ab1e1da8c245594125ceb37c888234ad22dc1`**. On 12 October its rerun button was disabled with “YOUR TEAM'S AUDIT HAS BEEN USED”. AI Coach still consumes that historical report; it is not a new scan of current main.
+
+The six priority findings were checked against the installed packages, resolved lockfile entries, current APK and Git history:
+
+| Platform finding | Current evidence |
+| --- | --- |
+| `tar 6.2.1` — critical | Resolved and installed version **7.5.22** |
+| Client secret at `src/services/api.ts:4` | The environment variable contains a **publishable** Supabase client key. See the key analysis below. |
+| `postcss 8.4.49` — high | Resolved and installed version **8.5.29** |
+| `bigint-buffer 1.1.5` — high | Removed; absent from lockfile resolutions and installed dependencies |
+| `@xmldom/xmldom 0.7.13` — high | Resolved versions **0.8.15** and **0.9.12**, with 0.8.15 installed at the root |
+| `image-size 1.2.1` — high | Resolved and installed version **2.0.4** |
+
+The old versions still appear as override **selectors** at the top of `pnpm-lock.yaml`; the right-hand versions and resolved package entries are the installed replacements. All ten dependency entries in the platform report are absent from the fresh `pnpm audit` findings.
+
+Fresh `pnpm audit --json` result: **0 critical, 2 high, 1 moderate**. The remaining advisories are `node-forge`, `braces` and `sprintf-js`, each with a checked-in local mitigation and passing regression tests as described below. npm currently lists no advisory-fixed release for those three; the scanner still reports their package versions. This result is not a zero-finding audit.
+
+Validation: TypeScript passed; **43 tests passed**, including database authorization, the existing security patches and four client-configuration checks; Android bundle export passed. A targeted scan of **786 historical Git blobs** and the published v0.2.12 APK found no Supabase secret key, service-role JWT or PEM private-key material. This is a targeted credential check, not an exhaustive secret scanner. APK SHA-256: `863cdc06e9845ad48c49b4cae22a4969a3752ac793af4df871805a2dc1af8c9c`.
+
+### Client key analysis and build protection
+
+[Supabase documents publishable and legacy anon keys as client-side keys](https://supabase.com/docs/guides/api/api-keys). The flagged line reads a public client identifier, not a service-role credential. Player authorization is enforced separately by the game API and database access rules. There is no evidence requiring credential rotation for this specific finding.
+
+[Expo configuration](../app.config.js) now runs a [build guard](../scripts/client-config-guard.cjs) that rejects privileged Supabase keys, service-role JWTs, private-key material and secret-named `EXPO_PUBLIC_*` variables before bundling. Its errors never print credential values. [Regression tests](../tests/clientConfig.test.ts) verify rejection and preserve publishable/legacy-anon configuration. This adds protection to future builds; the existing v0.2.12 APK already contains only the public client key.
+
+## Earlier fixes
 
 This note records what was changed after the competition site's dependency scan of commit `0d0ab1e`. It is not a claim that the application or its prize flow has been independently security certified.
 
