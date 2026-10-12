@@ -1,87 +1,47 @@
 # hundo.
 
-**Can you predict the crowd?** Hundo is a daily, live Android game for Solana Mobile. Ten questions ask what the crypto community thinks *right now*. There is no answer key: players choose the option they believe most other active players will choose, and the server determines the majority only after each timer closes. Survivors reach the final; everyone can see the crowd's answers afterward.
+**Can you predict the crowd?** Hundo is a live Android game for Solana Mobile. Players have 15 seconds to guess which of four answers the other active players will choose. The winning answer exists only after the votes are counted.
 
-## Install and see it work
+**[Download Android APK v0.2.12](https://github.com/vitalrr/hundo/releases/download/v0.2.12/hundo-0.2.12.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.12)
 
-**[Download the Android APK (v0.2.12)](https://github.com/vitalrr/hundo/releases/download/v0.2.12/hundo-0.2.12.apk)** · [Release notes](https://github.com/vitalrr/hundo/releases/tag/v0.2.12) · [Pilot and transaction evidence](docs/skr-pilot.md)
+The APK installs on a compatible Android phone without sharing Wi-Fi with the developer. **See how it works** runs without a wallet; live play uses a Solana Mobile Wallet Adapter wallet. The app was tested on a Solana Seeker.
 
-On 12 October 2026, a [57-participant pilot round](docs/skr-pilot.md) completed ten questions. One finalist received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG). The linked pilot record describes the participants and payout process.
+## The game
 
-The APK is a test-signed competition build. It installs directly on a compatible Android phone; the phone does not need to share Wi-Fi with the developer's Mac. The offline **See how it works** demo can be explored without a wallet. A live room requires internet and an Android wallet that supports Solana Mobile Wallet Adapter. The physical-device test used a Solana Seeker.
+1. Connect a wallet and join the room.
+2. Answer ten questions, with 15 seconds for each. Choices stay hidden until the timer ends.
+3. See the vote split, advance with the majority, or keep watching as a spectator. After the round, everyone can view the crowd recap.
 
-Ordinary scheduled rounds in the competition build are **free, zero-prize rehearsals**. The **1,000 SKR** figure on the home screen is a clearly labeled *planned daily prize* example, not a funded pool or an offer of a current payout. An explicitly announced pilot round instead displays its actual **1 SKR** prize. Rehearsals are planned for **19:00 UTC** when a round is scheduled; each phone displays that time locally.
+The server controls timing and counts only eligible votes. Notifications remind players 15 and 5 minutes before a scheduled game and link to the recap afterward.
 
-## How a round works
+## Verified pilot
 
-1. Connect a wallet, join the room, and wait for the synchronized start.
-2. Answer each of ten questions within **15 seconds**. Answers stay hidden from other players until the timer closes.
-3. See the vote split for **5 seconds**. Every option tied for the lead counts as a winning answer. Players who miss or choose another option become spectators.
-4. Finalists see the result; anyone with the app can inspect the ten-question crowd recap. After Android notification permission is granted, the installation receives reminders 15 and 5 minutes before a round and a recap notification afterward, even without a connected wallet.
+On 12 October 2026, a round with **57 participants** completed all ten questions: one player on a Seeker and 56 scripted participants. The sole finalist received [1 SKR on Solana Mainnet](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG). The [pilot record](docs/skr-pilot.md) links the participant script and payout code.
 
-The **server**, not the phone clock, accepts answers and settles each question. A configurable survivor cap can use server receipt time to break a large group of surviving players; network latency therefore affects a speed cutoff.
+The home screen's **1,000 SKR** is a planned daily prize. Ordinary scheduled rounds are free rehearsals; the completed 1 SKR payment was an operator-supervised pilot.
 
-## Architecture and source map
+## Source and checks
 
-| Part | What to inspect |
+| Part | Code |
 | --- | --- |
-| Android app | [App entry](App.tsx), [home and demo](src/features/HundoApp.tsx), [live controller](src/features/LiveRound.tsx), [question and result presentation](src/features/GameStage.tsx) |
-| Wallet and session | [Mobile Wallet Adapter](src/utils/useMobileWallet.tsx), [secure local session](src/services/gameSession.ts) |
-| Game API | [Supabase Edge Function](supabase/functions/game/index.ts): challenge login, joins, answers, snapshots, public aggregate recap |
-| Majority and rewards | [Latest settlement rules](supabase/migrations/202609220004_five_second_results.sql), with the schema and earlier changes in [SQL migrations](supabase/migrations) |
-| Notifications | [FCM sender](supabase/functions/notify/index.ts), [setup and delivery notes](docs/push-setup.md) |
-| Checks and evidence | [Rules tests](tests/rules.test.ts), [database tests](tests/database.test.ts), [57-player cast tests](tests/videoCast.test.ts), [pilot receipt and limits](docs/skr-pilot.md) |
+| Android app and live screens | [src/features](src/features), [App.tsx](App.tsx) |
+| Solana wallet connection | [Mobile Wallet Adapter](src/utils/useMobileWallet.tsx), [session](src/services/gameSession.ts) |
+| Server and majority rules | [game function](supabase/functions/game/index.ts), [database migrations](supabase/migrations) |
+| Notifications | [notify function](supabase/functions/notify/index.ts), [setup](docs/push-setup.md) |
+| Pilot reward | [payout tool](scripts/skr-pilot-payout.cjs), [57-participant test](tests/videoCast.test.ts) |
 
-The client is React Native/Expo, based on the official Solana Mobile Expo template. Supabase Postgres stores rounds, questions, players, answers and accounting records; its Edge Functions serve the client and send notifications. Solana Devnet is used for wallet entry verification in ordinary non-rehearsal rounds. Android's `android/` folder is generated by Expo prebuild and deliberately not committed; the app source, configuration, build script, database migrations and server functions are in this repository.
+The app uses React Native/Expo and Supabase. Wallet login uses a server-verified signature; the server settles each question after its deadline. The source includes the Android app, backend, database rules and 39 passing automated tests.
 
-## Solana wallet integration
+## Build
 
-The [Android wallet adapter](src/utils/useMobileWallet.tsx) opens a wallet session. The app asks the wallet to sign a one-time server challenge; the [game API](supabase/functions/game/index.ts) verifies the Ed25519 signature against the wallet address and issues a session token. The token is kept in Android SecureStore and the server session lasts up to 30 days, renewing when used near expiry. Signing in does **not** transfer funds.
-
-For an **ordinary non-rehearsal round**, joining sends a Solana Devnet Memo transaction containing the round ID. The server verifies that the finalized transaction was signed by the logged-in wallet and contains the expected memo before registering entry. The current **zero-prize rehearsals** use the signed wallet session to join without an entry transaction or network fee. This distinction is visible in the [live controller](src/features/LiveRound.tsx) and [join API](supabase/functions/game/index.ts).
-
-## Majority calculation
-
-The [Postgres settlement function](supabase/migrations/202609220004_five_second_results.sql) locks the round while settling. Only a player still active in that round can submit one choice per question before the server's 15-second deadline. After closing, the server counts the four choices, publishes their totals, advances everyone who selected an option tied for the highest positive count, and eliminates players with no accepted winning answer. A five-second reveal follows before the next question. After question ten, the server records the finalists and, if a nonzero pool was configured, computes each finalist's share in whole lamports.
-
-The [game API](supabase/functions/game/index.ts) exposes the settled percentages and final crowd recap. Question and answer data are server-side; the current and future live question packs are not bundled in the APK. The checked-in [September sample pack](content/week-one.tsv) is archived material, not the current schedule.
-
-## Reward flow and current limits
-
-The implemented reward evidence is a **supervised 1 SKR pilot**. A dedicated public treasury, a private operator tool, and a database record for the announced round connect the sole finalist to one verified Mainnet transfer. The tool checks the official SKR mint, recipient, amount, signed transaction and final confirmation; the app links to the transaction. See the [payout code](scripts/skr-pilot-payout.cjs), [pilot database rules](supabase/migrations/202610090001_skr_pilot.sql) and [confirmed transfer](https://explorer.solana.com/tx/2aSVpEYCrmQ4h5oZGjumePDgULMqFG22FFrKr4GznvZZVEvj5a9jTsMpraWV7ZRhQJ2EBmAMW2QRMna5cBQja1XG).
-
-The pilot requires the operator's Mac and is **not** an automatic daily prize service or escrow. Ordinary rehearsals have a zero actual pool and send no rewards. The database also models Devnet SOL finalist shares, but general payouts are not executed automatically. The displayed 1,000 SKR amount remains a presentation example.
-
-The operator currently controls any prize wallet. A wallet address is not proof of one unique human, and production use still requires bot resistance, payout verification, larger-room testing and monitoring.
-
-## Build from source
-
-Use **Node 24**, **pnpm**, **JDK 17**, and the **Android SDK**. Clone this repository, then:
+Use Node 24, pnpm, JDK 17 and the Android SDK. Copy `.env.example` to `.env` and set the public Supabase endpoint and publishable key for live features. Download the Firebase `google-services.json` for `app.hundo.mobile` to enable push in a local build; it is intentionally excluded from Git.
 
 ```sh
 pnpm install
-cp .env.example .env
 pnpm typecheck
 pnpm test
-```
-
-For live features, put the public Supabase game endpoint and publishable key into `.env` as `EXPO_PUBLIC_GAME_API_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. An empty endpoint leaves the standalone demo available. Do not place a Supabase service-role key, Firebase service-account key, or notification scheduler secret in the app or in Git.
-
-The native build also needs `google-services.json` for the Android package `app.hundo.mobile`. It is intentionally excluded from Git and must be downloaded from the Firebase Android app settings before building; see [push setup](docs/push-setup.md). **The source checkout cannot produce an identical push-enabled APK without that Firebase configuration.** The linked, prebuilt APK already includes the client configuration.
-
-With `JAVA_HOME` set to JDK 17 and `ANDROID_HOME` set to the Android SDK, either run `pnpm android` for development or build the test-signed ARM64 APK:
-
-```sh
 pnpm build:local
-# output: dist/hundo-preview.apk
+# APK: dist/hundo-preview.apk
 ```
 
-The [build script](scripts/build-preview.sh) generates `android/` using Expo prebuild and assembles the native release variant. A store release needs its own signing and publication setup; this APK is for testing and judging.
-
-## Backend and evidence
-
-Apply [migrations](supabase/migrations) in filename order, then deploy the [game](supabase/functions/game/index.ts) and [notification](supabase/functions/notify/index.ts) Edge Functions. The backend uses server-only Supabase credentials and `SOLANA_RPC_URL`; scheduled push sending uses server-only Firebase credentials. [Daily operations](docs/daily-operations.md) and the [question-writing guide](docs/question-guidelines.md) document scheduling and content rules.
-
-In a [September 20 rehearsal](docs/rehearsal.md), one Seeker and one simulated Mac player completed a shared round. The [October pilot](docs/skr-pilot.md) exercised the real server voting, elimination, winner screen and payout flow. Its [participant script](scripts/video-cast.cjs) and [tests](tests/videoCast.test.ts) are public. Type checking and all 39 automated tests passed for v0.2.12.
-
-The [competition submission notes](docs/submission.md) describe the product and demo material. The [security audit follow-up](docs/security-audit.md) records fixed and remaining dependency findings. The Explorer transaction above is the public payment evidence; this repository is not a dApp Store release.
+The build script generates the native `android/` folder, which is not committed. See [daily operations](docs/daily-operations.md), [question guidelines](docs/question-guidelines.md), [pilot details](docs/skr-pilot.md) and [security notes](docs/security-audit.md) for the technical record.
